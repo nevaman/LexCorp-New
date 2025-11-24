@@ -87,22 +87,40 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
           setBranchOfficeId(member?.branch_office_id ?? null);
         }
         if (!org) {
-          const { data, error } = await supabase
-            .from('organizations')
-            .select('*')
+          const { data: invite, error: inviteError } = await supabase
+            .from('branch_invites')
+            .select('role, branch_office_id, department, organizations(*)')
             .eq('user_id', userId)
-            .maybeSingle<Organization>();
+            .eq('status', 'accepted')
+            .maybeSingle();
           if (!mounted) return;
-          if (error) throw error;
-          if (data) {
-            await ensureMembership({
-              userId,
-              organizationId: data.id,
-              role: 'org_admin',
-            });
-            setOrganization(data);
-            setMemberRole('org_admin');
-            setBranchOfficeId(null);
+          if (inviteError) {
+            console.warn('Invite fallback lookup failed', inviteError);
+          } else if (invite) {
+            const orgData = invite.organizations as Organization | null;
+            if (orgData) {
+              setOrganization(orgData);
+            }
+            setMemberRole(invite.role as 'org_admin' | 'branch_admin' | 'branch_user');
+            setBranchOfficeId(invite.branch_office_id);
+          } else {
+            const { data, error } = await supabase
+              .from('organizations')
+              .select('*')
+              .eq('user_id', userId)
+              .maybeSingle<Organization>();
+            if (!mounted) return;
+            if (error) throw error;
+            if (data) {
+              await ensureMembership({
+                userId,
+                organizationId: data.id,
+                role: 'org_admin',
+              });
+              setOrganization(data);
+              setMemberRole('org_admin');
+              setBranchOfficeId(null);
+            }
           }
         }
       } catch (err) {

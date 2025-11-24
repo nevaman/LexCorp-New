@@ -70,9 +70,15 @@ export interface Agreement {
 
 export interface Template {
   id: string;
+  organization_id: string;
+  branch_office_id?: string | null;
   name: string;
-  description: string;
-  sections: { title: string; required: boolean; content?: string }[];
+  description?: string | null;
+  visibility: 'organization' | 'branch';
+  sections: { id: string; title: string; content: string; required: boolean }[];
+  created_by?: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Organization {

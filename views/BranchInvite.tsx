@@ -80,14 +80,22 @@ const BranchInvite: React.FC<BranchInviteProps> = ({ token }) => {
       if (!userId) {
         throw new Error('Sign up succeeded but no user id returned.');
       }
-      await ensureMembership({
-        userId,
-        organizationId: inviteDetails.organization_id,
-        role: inviteDetails.role === 'branch_user' ? 'branch_user' : 'branch_admin',
-        branchOfficeId: inviteDetails.branch_office_id,
-        department: inviteDetails.department || null,
-      });
-      await markInviteAccepted(inviteDetails.id, userId);
+      try {
+        await ensureMembership({
+          userId,
+          organizationId: inviteDetails.organization_id,
+          role: inviteDetails.role === 'branch_user' ? 'branch_user' : 'branch_admin',
+          branchOfficeId: inviteDetails.branch_office_id,
+          department: inviteDetails.department || null,
+        });
+      } catch (membershipError) {
+        console.warn('ensureMembership failed, will retry after login', membershipError);
+      }
+      try {
+        await markInviteAccepted(inviteDetails.id, userId);
+      } catch (markError) {
+        console.warn('markInviteAccepted failed', markError);
+      }
       setSuccess(true);
     } catch (err) {
       const message =

@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Agreement, AgreementStatus, RiskLevel, Clause, BrandSettings } from '../types';
+import { Agreement, AgreementStatus, RiskLevel, Clause, BrandSettings, Template } from '../types';
 import { 
   Save, ArrowLeft, Sparkles, 
   MessageSquare, Info 
 } from '../components/ui/Icons';
 import { generateClauseContent, analyzeRisk } from '../services/geminiService';
+import { fetchTemplates } from '../services/templateService';
+import { useAuth } from '../contexts/AuthContext';
 
 interface GeneratorProps {
   onSave: (agreement: Agreement) => Promise<void>;
@@ -22,10 +24,27 @@ const defaultSections: Clause[] = [
 ];
 
 const AgreementGenerator: React.FC<GeneratorProps> = ({ onSave, onBack, initialData, brandSettings }) => {
+  const { organization, branchOfficeId } = useAuth();
   const [title, setTitle] = useState(initialData?.title || 'New Agreement');
   const [counterparty, setCounterparty] = useState(initialData?.counterparty || '');
   const [type, setType] = useState(initialData?.tags?.[0] || 'Service Agreement');
   const [sections, setSections] = useState<Clause[]>(initialData?.sections || defaultSections);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  useEffect(() => {
+    const loadTemplates = async () => {
+      if (!organization) return;
+      try {
+        const data = await fetchTemplates({
+          organizationId: organization.id,
+          branchOfficeId: branchOfficeId ?? null,
+        });
+        setTemplates(data);
+      } catch (err) {
+        console.warn('Failed to load templates', err);
+      }
+    };
+    loadTemplates();
+  }, [organization?.id, branchOfficeId]);
   const [riskData, setRiskData] = useState<{ level: string; reason: string }>({
     level: initialData?.riskLevel || 'Low',
     reason: initialData ? 'Existing agreement loaded.' : 'Standard draft.',
