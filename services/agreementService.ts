@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient';
-import { Agreement } from '../types';
+import { Agreement, AgreementStatus } from '../types';
 
 type AgreementRow = {
   id: string;
@@ -73,6 +73,24 @@ export const fetchAgreementsForOrganization = async (
   return (data as AgreementRow[]).map(rowToAgreement);
 };
 
+export const fetchAgreementsForProject = async (
+  organizationId: string,
+  projectId: string
+): Promise<Agreement[]> => {
+  if (!organizationId || !projectId) return [];
+
+  const { data, error } = await supabase
+    .from('agreements')
+    .select('*')
+    .eq('organization_id', organizationId)
+    .eq('project_id', projectId)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+
+  return (data as AgreementRow[]).map(rowToAgreement);
+};
+
 export const upsertAgreementForOrganization = async (
   agreement: Agreement,
   organizationId: string,
@@ -111,9 +129,21 @@ export const upsertAgreementForOrganization = async (
   return rowToAgreement(data as AgreementRow);
 };
 
-export const fetchAgreementsForProject = async (
-  organizationId: string,
-  projectId: string
-): Promise<Agreement[]> => {
-  return fetchAgreementsForOrganization(organizationId, { projectId });
+export const updateAgreementStatus = async (
+  agreementId: string,
+  status: AgreementStatus
+): Promise<Agreement> => {
+  const { data, error } = await supabase
+    .from('agreements')
+    .update({
+      status,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', agreementId)
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  return rowToAgreement(data as AgreementRow);
 };

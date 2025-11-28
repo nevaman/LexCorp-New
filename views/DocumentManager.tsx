@@ -1,24 +1,67 @@
-import React, { useState } from 'react';
-import { Agreement, AgreementStatus, RiskLevel } from '../types';
-import { 
-  Search, Filter, MoreVertical, FileText, 
-  Calendar, AlertTriangle, CheckCircle2, ArrowLeft, ArrowRight, Folder
+import React, { useMemo, useRef, useState } from 'react';
+import { Agreement, AgreementDocument, AgreementStatus, RiskLevel } from '../types';
+import {
+  Search,
+  Filter,
+  MoreVertical,
+  FileText,
+  Calendar,
+  AlertTriangle,
+  CheckCircle2,
+  ArrowLeft,
+  ArrowRight,
+  Folder,
+  UploadCloud,
+  Paperclip,
+  Trash2,
+  Loader2,
+  X,
 } from '../components/ui/Icons';
+import { useAuth } from '../contexts/AuthContext';
+import {
+  deleteAgreementDocument,
+  listAgreementDocuments,
+  uploadAgreementDocument,
+} from '../services/agreementDocumentService';
 
 interface ManagerProps {
   agreements: Agreement[];
   onOpenAgreement: (agreement: Agreement) => void;
+  onStatusChange?: (agreementId: string, status: AgreementStatus) => Promise<void>;
 }
 
-const DocumentManager: React.FC<ManagerProps> = ({ agreements, onOpenAgreement }) => {
+const DocumentManager: React.FC<ManagerProps> = ({
+  agreements,
+  onOpenAgreement,
+  onStatusChange,
+}) => {
+  const { isOrgAdmin, memberRole } = useAuth();
+  const canAdminister = isOrgAdmin || memberRole === 'branch_admin';
   const [filter, setFilter] = useState('All');
   const [search, setSearch] = useState('');
+  const [manageAgreement, setManageAgreement] = useState<Agreement | null>(null);
+  const [documents, setDocuments] = useState<AgreementDocument[]>([]);
+  const [docError, setDocError] = useState<string | null>(null);
+  const [docsLoading, setDocsLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [statusSaving, setStatusSaving] = useState(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const filteredAgreements = agreements.filter(a => {
-      const matchesStatus = filter === 'All' || a.status === filter;
-      const matchesSearch = a.title.toLowerCase().includes(search.toLowerCase()) || a.counterparty.toLowerCase().includes(search.toLowerCase());
+  const filteredAgreements = useMemo(() => {
+    return agreements.filter((agreement) => {
+      const matchesStatus = filter === 'All' || agreement.status === filter;
+      const matchesSearch =
+        agreement.title.toLowerCase().includes(search.toLowerCase()) ||
+        agreement.counterparty.toLowerCase().includes(search.toLowerCase());
       return matchesStatus && matchesSearch;
-  });
+    });
+  }, [agreements, filter, search]);
+
+  const statusOptions = useMemo(
+    () => Object.values(AgreementStatus),
+    []
+  );
 
   const getStatusStyles = (status: AgreementStatus) => {
     switch (status) {
@@ -29,6 +72,103 @@ const DocumentManager: React.FC<ManagerProps> = ({ agreements, onOpenAgreement }
       default: return 'bg-slate-500/10 text-slate-400';
     }
   };
+
+  const refreshDocuments = async (agreementId: string) => {
+    setDocsLoading(true);
+    setDocError(null);
+    try {
+      const items = await listAgreementDocuments(agreementId);
+      setDocuments(items);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Unable to load documents.';
+      setDocError(message);
+    } finally {
+      setDocsLoading(false);
+    }
+  };
+
+  const handleManageClick = (agreement: Agreement, event?: React.MouseEvent) => {
+    event?.stopPropagation();
+    setManageAgreement(agreement);
+    refreshDocuments(agreement.id);
+  };
+
+  const closeManagePanel = () => {
+    setManageAgreement(null);
+    setDocuments([]);
+    setDocError(null);
+    setStatusMessage(null);
+  };
+
+  const handleStatusUpdate = async (nextStatus: AgreementStatus) => {
+    if (!manageAgreement || !onStatusChange) return;
+    if (manageAgreement.status === nextStatus) return;
+    setStatusSaving(true);
+    setStatusMessage(null);
+    try {
+      await onStatusChange(manageAgreement.id, nextStatus);
+      setManageAgreement((prev) =>
+        prev ? { ...prev, status: nextStatus } : prev
+      );
+      setStatusMessage('Status updated.');
+    } catch (err) {
+      setStatusMessage(
+        err instanceof Error ? err.message : 'Failed to update status.'
+      );
+    } finally {
+      setStatusSaving(false);
+    }
+  };
+
+  const handleUploadFiles = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!manageAgreement) return;
+    const files = event.target.files;
+    if (!files || files.length === 0) return;
+    setUploading(true);
+    setDocError(null);
+    try {
+      const uploads: AgreementDocument[] = [];
+      for (const file of Array.from(files)) {
+        const uploaded = await uploadAgreementDocument({
+          agreementId: manageAgreement.id,
+          file,
+        });
+        uploads.push(uploaded);
+      }
+      setDocuments((prev) => [...uploads, ...prev]);
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Upload failed.';
+      setDocError(message);
+    } finally {
+      setUploading(false);
+      event.target.value = '';
+    }
+  };
+
+  const handleDeleteDocument = async (doc: AgreementDocument) => {
+    if (!manageAgreement) return;
+    setDocError(null);
+    try {
+      await deleteAgreementDocument(manageAgreement.id, doc.name);
+      setDocuments((prev) => prev.filter((item) => item.path !== doc.path));
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : 'Unable to delete document.';
+      setDocError(message);
+    }
+  };
+
+  const getFileSizeLabel = (size: number) => {
+    if (!size) return 'Unknown size';
+    if (size < 1024) return `${size} B`;
+    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+    return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const getDisplayName = (doc: AgreementDocument) =>
+    doc.originalName || doc.name.replace(/^\d+-/, '');
 
   return (
     <div className="p-10 h-full flex flex-col">
@@ -148,9 +288,19 @@ const DocumentManager: React.FC<ManagerProps> = ({ agreements, onOpenAgreement }
                                 <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-white/5 px-2.5 py-1 rounded border border-slate-200 dark:border-white/5">{agreement.department}</span>
                             </td>
                             <td className="px-6 py-5 text-right">
-                                <button className="text-slate-400 hover:text-slate-900 dark:hover:text-white p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">
-                                    <MoreVertical size={18} />
-                                </button>
+                                <div className="flex items-center justify-end gap-2">
+                                  {canAdminister && (
+                                    <button
+                                      onClick={(event) => handleManageClick(agreement, event)}
+                                      className="px-3 py-1.5 rounded-lg border border-slate-200 dark:border-white/10 text-xs font-semibold uppercase tracking-wide text-slate-600 dark:text-slate-300 hover:border-brand hover:text-brand transition-colors"
+                                    >
+                                      Manage
+                                    </button>
+                                  )}
+                                  <button className="text-slate-400 hover:text-slate-900 dark:hover:text-white p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">
+                                      <MoreVertical size={18} />
+                                  </button>
+                                </div>
                             </td>
                         </tr>
                     ))}
@@ -167,6 +317,151 @@ const DocumentManager: React.FC<ManagerProps> = ({ agreements, onOpenAgreement }
             </div>
         </div>
       </div>
+      {canAdminister && manageAgreement && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+          <div className="bg-white dark:bg-[#020617] w-full max-w-3xl rounded-3xl shadow-2xl border border-white/10 relative p-8">
+            <button
+              className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-full hover:bg-slate-100 dark:hover:bg-white/10 transition"
+              onClick={closeManagePanel}
+            >
+              <X size={16} />
+            </button>
+            <div className="space-y-1 mb-6">
+              <p className="text-[11px] uppercase tracking-[0.4em] text-slate-400">
+                Admin Controls
+              </p>
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+                {manageAgreement.title}
+              </h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Counterparty: {manageAgreement.counterparty}
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="bg-slate-50 dark:bg-white/5 rounded-2xl p-5 border border-slate-200 dark:border-white/10">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.4em] text-slate-400">
+                      Status
+                    </p>
+                    <p className="text-sm text-slate-500">
+                      Align status across workflow stages
+                    </p>
+                  </div>
+                  <select
+                    value={manageAgreement.status}
+                    onChange={(e) =>
+                      handleStatusUpdate(e.target.value as AgreementStatus)
+                    }
+                    disabled={statusSaving}
+                    className="px-4 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0f172a] text-sm font-semibold text-slate-700 dark:text-white focus:border-brand focus:ring-0"
+                  >
+                    {statusOptions.map((status) => (
+                      <option key={status} value={status}>
+                        {status}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {statusMessage && (
+                  <p className="text-xs text-slate-500 mt-2">{statusMessage}</p>
+                )}
+              </div>
+
+              <div className="bg-slate-50 dark:bg-white/5 rounded-2xl p-5 border border-slate-200 dark:border-white/10">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                  <div>
+                    <p className="text-[11px] uppercase tracking-[0.4em] text-slate-400">
+                      Supporting Documents
+                    </p>
+                    <p className="text-sm text-slate-500">
+                      Upload PDFs, scans, or exhibits tied to this agreement.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="file"
+                      multiple
+                      ref={fileInputRef}
+                      className="hidden"
+                      onChange={handleUploadFiles}
+                    />
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                      className="px-4 py-2 rounded-xl bg-brand text-white text-sm font-semibold flex items-center gap-2 disabled:opacity-60"
+                    >
+                      {uploading ? (
+                        <>
+                          <Loader2 size={16} className="animate-spin" /> Uploading
+                        </>
+                      ) : (
+                        <>
+                          <UploadCloud size={16} /> Upload Files
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+                {docError && (
+                  <div className="text-sm text-red-500 bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/30 rounded-xl px-4 py-2 mb-3">
+                    {docError}
+                  </div>
+                )}
+                <div className="space-y-3 max-h-64 overflow-y-auto pr-2">
+                  {docsLoading ? (
+                    <div className="flex items-center justify-center py-10 text-slate-500 text-sm">
+                      <Loader2 size={20} className="animate-spin mr-2" /> Loading
+                      documents...
+                    </div>
+                  ) : documents.length === 0 ? (
+                    <div className="text-sm text-slate-500 text-center py-8">
+                      No documents uploaded yet.
+                    </div>
+                  ) : (
+                    documents.map((doc) => (
+                      <div
+                        key={doc.path}
+                        className="flex items-center justify-between border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 bg-white dark:bg-[#0f172a]"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Paperclip size={16} className="text-brand" />
+                          <div>
+                            <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                              {getDisplayName(doc)}
+                            </p>
+                            <p className="text-xs text-slate-500">
+                              {getFileSizeLabel(doc.size)}
+                              {doc.mimeType ? ` • ${doc.mimeType}` : ''}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <a
+                            href={doc.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs font-semibold text-brand hover:underline"
+                          >
+                            Download
+                          </a>
+                          <button
+                            onClick={() => handleDeleteDocument(doc)}
+                            className="p-2 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -24,6 +24,7 @@ before update on public.projects
 for each row
 execute procedure public.set_updated_at();
 
+
   id uuid primary key default gen_random_uuid(),
   organization_id uuid not null references public.organizations (id) on delete cascade,
   branch_office_id uuid references public.branch_offices (id) on delete set null,

@@ -45,6 +45,7 @@ export interface BrandSettings {
   companyName: string;
   logoUrl: string | null;
   tone: string;
+  logoPath?: string | null;
 }
 
 export interface Agreement {
@@ -68,6 +69,16 @@ export interface Agreement {
   comments: Comment[];
   auditLog: AuditEvent[];
   notes?: string;
+}
+
+export interface AgreementDocument {
+  name: string;
+  path: string;
+  size: number;
+  mimeType?: string | null;
+  createdAt?: string | null;
+  url: string;
+  originalName?: string;
 }
 
 export interface Template {
@@ -129,53 +140,3 @@ export interface BranchOffice {
   created_at: string;
   updated_at: string;
 }
-
-export type ProjectStatus = 'active' | 'onhold' | 'completed';
-
-export interface Project {
-  id: string;
-  organization_id: string;
-  branch_office_id?: string | null;
-  name: string;
-  description?: string | null;
-  status: ProjectStatus;
-  start_date?: string | null;
-  end_date?: string | null;
-  created_by?: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface VendorDocument {
-  id: string;
-  name: string;
-  url: string;
-  uploaded_at: string;
-  mime_type?: string | null;
-}
-
-export interface Vendor {
-  id: string;
-  organization_id: string;
-  branch_office_id?: string | null;
-  name: string;
-  tin: string;
-  contact_email?: string | null;
-  contact_phone?: string | null;
-  notes?: string | null;
-  documents: VendorDocument[];
-  created_by?: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export type ViewMode =
-  | 'dashboard'
-  | 'generator'
-  | 'templates'
-  | 'analytics'
-  | 'settings'
-  | 'offices'
-  | 'departments'
-  | 'vendors'
-  | 'projects';

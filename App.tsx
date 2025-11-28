@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Sidebar from './components/Sidebar';
 import DocumentManager from './views/DocumentManager';
 import AgreementGenerator from './views/AgreementGenerator';
@@ -16,10 +16,18 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import {
   fetchAgreementsForOrganization,
   upsertAgreementForOrganization,
+  updateAgreementStatus,
 } from './services/agreementService';
+import {
+  DEFAULT_BRAND_SETTINGS,
+  fetchBrandSettings,
+  saveBrandSettings,
+  uploadBrandLogo,
+} from './services/brandSettingsService';
 import {
   ViewMode,
   Agreement,
+  AgreementStatus,
   BrandSettings,
 } from './types';
 
@@ -76,41 +84,15 @@ const AppShell: React.FC = () => {
   const [agreementsLoading, setAgreementsLoading] = useState(false);
   const [agreementsError, setAgreementsError] = useState<string | null>(null);
   const [editingAgreement, setEditingAgreement] = useState<Agreement | undefined>(undefined);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
-    if (typeof window === 'undefined') return false;
-    return window.innerWidth <= 1400;
-  });
-  const autoCollapseRef = useRef<boolean>(sidebarCollapsed);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   
-  const [brandSettings, setBrandSettings] = useState<BrandSettings>({
-    companyName: 'LexCorp',
-    primaryColor: '#f97316',
-    fontFamily: 'DM Sans',
-    logoUrl: null,
-    tone: 'Professional, firm, and concise.'
-  });
+  const [brandSettings, setBrandSettings] = useState<BrandSettings>(DEFAULT_BRAND_SETTINGS);
+  const [brandSettingsLoading, setBrandSettingsLoading] = useState(false);
+  const [brandSettingsSaving, setBrandSettingsSaving] = useState(false);
+  const [logoUploading, setLogoUploading] = useState(false);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const handleResponsiveSidebar = () => {
-      const shouldAutoCollapse = window.innerWidth <= 1400;
-      if (shouldAutoCollapse && !autoCollapseRef.current) {
-        autoCollapseRef.current = true;
-        setSidebarCollapsed(true);
-      } else if (!shouldAutoCollapse && autoCollapseRef.current) {
-        autoCollapseRef.current = false;
-        setSidebarCollapsed(false);
-      }
-    };
-
-    handleResponsiveSidebar();
-    window.addEventListener('resize', handleResponsiveSidebar);
-    return () => window.removeEventListener('resize', handleResponsiveSidebar);
-  }, []);
-
-  const handleSidebarToggle = useCallback(() => {
-    autoCollapseRef.current = false;
-    setSidebarCollapsed((prev) => !prev);
+  const handleSidebarHoverChange = useCallback((collapsedState: boolean) => {
+    setSidebarCollapsed(collapsedState);
   }, []);
 
   const handleSignOut = () => {
@@ -123,6 +105,7 @@ const AppShell: React.FC = () => {
     (targetView: ViewMode) => {
       if (targetView === 'offices' && !isOrgAdmin) return DEFAULT_VIEW;
       if (targetView === 'departments' && !isBranchAdmin) return DEFAULT_VIEW;
+      if (targetView === 'settings' && !isOrgAdmin) return DEFAULT_VIEW;
       if (
         targetView === 'vendors' &&
         !(isOrgAdmin || isBranchAdmin)
@@ -160,6 +143,38 @@ const AppShell: React.FC = () => {
   useEffect(() => {
     refreshAgreements();
   }, [refreshAgreements]);
+
+  useEffect(() => {
+    const loadBrandSettings = async () => {
+      if (!organization?.id) {
+        setBrandSettings(DEFAULT_BRAND_SETTINGS);
+        return;
+      }
+      setBrandSettingsLoading(true);
+      try {
+        const data = await fetchBrandSettings(organization.id);
+        setBrandSettings({
+          ...DEFAULT_BRAND_SETTINGS,
+          ...data,
+          companyName:
+            data.companyName ||
+            organization.name ||
+            DEFAULT_BRAND_SETTINGS.companyName,
+        });
+      } catch (err) {
+        console.error('Failed to load brand settings', err);
+        setBrandSettings((prev) => ({
+          ...DEFAULT_BRAND_SETTINGS,
+          ...prev,
+          companyName: organization.name || DEFAULT_BRAND_SETTINGS.companyName,
+        }));
+      } finally {
+        setBrandSettingsLoading(false);
+      }
+    };
+
+    loadBrandSettings();
+  }, [organization?.id, organization?.name]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -249,6 +264,61 @@ const AppShell: React.FC = () => {
     }
   };
 
+  const handleAgreementStatusChange = useCallback(
+    async (agreementId: string, status: AgreementStatus) => {
+      try {
+        const updated = await updateAgreementStatus(agreementId, status);
+        setAgreements((prev) =>
+          prev.map((agreement) =>
+            agreement.id === updated.id ? updated : agreement
+          )
+        );
+      } catch (err) {
+        console.error('Failed to update agreement status', err);
+        throw err;
+      }
+    },
+    []
+  );
+
+  const handleBrandSettingsSave = useCallback(
+    async (nextSettings: BrandSettings) => {
+      if (!organization?.id) return;
+      setBrandSettingsSaving(true);
+      try {
+        const saved = await saveBrandSettings(organization.id, nextSettings);
+        setBrandSettings(saved);
+      } catch (err) {
+        console.error('Failed to save brand settings', err);
+        throw err;
+      } finally {
+        setBrandSettingsSaving(false);
+      }
+    },
+    [organization?.id]
+  );
+
+  const handleLogoUpload = useCallback(
+    async (file: File) => {
+      if (!organization?.id) return;
+      setLogoUploading(true);
+      try {
+        const { path, url } = await uploadBrandLogo(organization.id, file);
+        await handleBrandSettingsSave({
+          ...brandSettings,
+          logoUrl: url,
+          logoPath: path,
+        });
+      } catch (err) {
+        console.error('Failed to upload logo', err);
+        throw err;
+      } finally {
+        setLogoUploading(false);
+      }
+    },
+    [organization?.id, brandSettings, handleBrandSettingsSave]
+  );
+
   const handleOpenAgreement = (agreement: Agreement) => {
     setEditingAgreement(agreement);
     navigateTo('generator');
@@ -292,9 +362,10 @@ const AppShell: React.FC = () => {
           );
         }
         return (
-          <DocumentManager 
-            agreements={agreements} 
-            onOpenAgreement={handleOpenAgreement} 
+          <DocumentManager
+            agreements={agreements}
+            onOpenAgreement={handleOpenAgreement}
+            onStatusChange={handleAgreementStatusChange}
           />
         );
       case 'generator':
@@ -312,13 +383,22 @@ const AppShell: React.FC = () => {
         return <AnalyticsView agreements={agreements} />;
       case 'settings':
         return (
-          <SettingsView settings={brandSettings} onSave={setBrandSettings} />
+          <SettingsView
+            settings={brandSettings}
+            onSave={handleBrandSettingsSave}
+            onUploadLogo={handleLogoUpload}
+            saving={brandSettingsSaving}
+            uploadingLogo={logoUploading}
+            loading={brandSettingsLoading}
+            canEdit={isOrgAdmin}
+          />
         );
       case 'offices':
         return isOrgAdmin ? <OfficeManager /> : (
           <DocumentManager
             agreements={agreements}
             onOpenAgreement={handleOpenAgreement}
+            onStatusChange={handleAgreementStatusChange}
           />
         );
       case 'departments':
@@ -326,6 +406,7 @@ const AppShell: React.FC = () => {
           <DocumentManager
             agreements={agreements}
             onOpenAgreement={handleOpenAgreement}
+            onStatusChange={handleAgreementStatusChange}
           />
         );
       case 'vendors':
@@ -335,6 +416,7 @@ const AppShell: React.FC = () => {
             <DocumentManager
               agreements={agreements}
               onOpenAgreement={handleOpenAgreement}
+              onStatusChange={handleAgreementStatusChange}
             />
           );
       case 'projects':
@@ -344,6 +426,7 @@ const AppShell: React.FC = () => {
             <DocumentManager
               agreements={agreements}
               onOpenAgreement={handleOpenAgreement}
+              onStatusChange={handleAgreementStatusChange}
             />
           );
       default:
@@ -351,6 +434,7 @@ const AppShell: React.FC = () => {
           <DocumentManager
             agreements={agreements}
             onOpenAgreement={handleOpenAgreement}
+            onStatusChange={handleAgreementStatusChange}
           />
         );
     }
@@ -378,8 +462,8 @@ const AppShell: React.FC = () => {
         isDarkMode ? 'bg-[#020617] text-slate-200' : 'bg-slate-50 text-slate-900'
       }`}
     >
-          <Sidebar 
-        currentView={view} 
+      <Sidebar
+        currentView={view}
         setView={handleSidebarNavigate}
         isDarkMode={isDarkMode}
         toggleTheme={() => setIsDarkMode(!isDarkMode)}
@@ -389,8 +473,8 @@ const AppShell: React.FC = () => {
         signingOut={actionLoading}
         isOrgAdmin={isOrgAdmin}
         memberRole={memberRole}
-            collapsed={sidebarCollapsed}
-            onToggleCollapse={handleSidebarToggle}
+        collapsed={sidebarCollapsed}
+        onHoverChange={handleSidebarHoverChange}
       />
       <main
         className={`flex-1 ${

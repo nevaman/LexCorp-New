@@ -13,8 +13,6 @@ import {
   Briefcase,
   Store,
   ClipboardList,
-  ChevronLeft,
-  ChevronRight,
 } from './ui/Icons';
 import { ViewMode } from '../types';
 
@@ -30,7 +28,7 @@ interface SidebarProps {
   isOrgAdmin?: boolean;
   memberRole?: 'org_admin' | 'branch_admin' | 'branch_user' | null;
   collapsed: boolean;
-  onToggleCollapse: () => void;
+  onHoverChange?: (collapsed: boolean) => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -45,20 +43,20 @@ const Sidebar: React.FC<SidebarProps> = ({
   isOrgAdmin,
   memberRole,
   collapsed,
-  onToggleCollapse,
+  onHoverChange,
 }) => {
   const navItems = [
     { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
     { id: 'generator', label: 'Drafting Studio', icon: FilePlus },
     { id: 'templates', label: 'Template Builder', icon: FileText },
     { id: 'analytics', label: 'Intelligence', icon: BarChart3 },
+    ...(isOrgAdmin ? [{ id: 'settings', label: 'Brand Settings', icon: Settings }] : []),
     ...(isOrgAdmin || memberRole === 'branch_admin'
       ? [{ id: 'projects', label: 'Projects', icon: ClipboardList }]
       : []),
     ...(isOrgAdmin || memberRole === 'branch_admin'
       ? [{ id: 'vendors', label: 'Vendors', icon: Store }]
       : []),
-    { id: 'settings', label: 'Brand Settings', icon: Settings },
     ...(isOrgAdmin
       ? [{ id: 'offices', label: 'Office Network', icon: Building2 }]
       : []),
@@ -67,8 +65,22 @@ const Sidebar: React.FC<SidebarProps> = ({
       : []),
   ];
 
+  const handleMouseEnter = () => onHoverChange?.(false);
+  const handleMouseLeave = () => onHoverChange?.(true);
+  const handleFocus = () => onHoverChange?.(false);
+  const handleBlur: React.FocusEventHandler<HTMLDivElement> = (event) => {
+    const next = event.relatedTarget as Node | null;
+    if (!next || !event.currentTarget.contains(next)) {
+      onHoverChange?.(true);
+    }
+  };
+
   return (
     <div
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
       className={`${
         collapsed ? 'w-24' : 'w-72'
       } bg-white/95 dark:bg-[#020617]/95 backdrop-blur-xl flex flex-col h-screen fixed left-0 top-0 border-r border-slate-200 dark:border-white/5 shadow-2xl z-50 transition-all duration-300`}
@@ -181,13 +193,6 @@ const Sidebar: React.FC<SidebarProps> = ({
             )}
           </>
         )}
-        <button
-          onClick={onToggleCollapse}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded-xl border border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:text-brand hover:border-brand/40 transition"
-        >
-          {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-          {!collapsed && <span className="text-sm font-semibold">Collapse</span>}
-        </button>
       </div>
     </div>
   );

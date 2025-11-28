@@ -120,4 +120,3 @@ export const updateProjectStatus = async (
   status: ProjectStatus
 ): Promise<Project> => updateProject(id, { status });
 
-import { Project, ProjectStatus } from '../types';
