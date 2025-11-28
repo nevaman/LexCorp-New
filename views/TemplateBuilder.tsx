@@ -1,12 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  FilePlus,
-  MoreVertical,
   Plus,
   Trash2,
   ChevronUp,
   ChevronDown,
-  Settings,
   Copy,
   Loader2,
   Sparkles,
@@ -73,6 +70,8 @@ const TemplateBuilder: React.FC = () => {
     description: '',
     visibility: 'organization' as 'organization' | 'branch',
   });
+  const [activeClauseId, setActiveClauseId] = useState<string | null>(null);
+  const textAreaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
 
   const isOrgAdmin = memberRole === 'org_admin';
   const isBranchAdmin = memberRole === 'branch_admin';
@@ -176,6 +175,109 @@ const TemplateBuilder: React.FC = () => {
     ]);
   };
 
+  const updateClauseContent = (sectionId: string, content: string) => {
+    setDraft((prev) =>
+      prev.map((section) => (section.id === sectionId ? { ...section, content } : section))
+    );
+  };
+
+  const withActiveTextArea = (
+    callback: (params: {
+      textarea: HTMLTextAreaElement;
+      value: string;
+      selectionStart: number;
+      selectionEnd: number;
+      clauseId: string;
+    }) =>
+      | {
+          text: string;
+          selectionStart: number;
+          selectionEnd: number;
+        }
+      | void
+  ) => {
+    const targetId = activeClauseId ?? draft[0]?.id;
+    if (!targetId) return;
+    const textarea = textAreaRefs.current[targetId];
+    if (!textarea) return;
+
+    const { selectionStart, selectionEnd, value } = textarea;
+    const result = callback({
+      textarea,
+      value,
+      selectionStart,
+      selectionEnd,
+      clauseId: targetId,
+    });
+    if (!result) return;
+
+    updateClauseContent(targetId, result.text);
+    requestAnimationFrame(() => {
+      textarea.focus();
+      textarea.setSelectionRange(result.selectionStart, result.selectionEnd);
+    });
+  };
+
+  const wrapSelection = (wrapper: string) => {
+    withActiveTextArea(({ value, selectionStart, selectionEnd }) => {
+      const before = value.slice(0, selectionStart);
+      const selected = value.slice(selectionStart, selectionEnd);
+      const after = value.slice(selectionEnd);
+      const newText = `${before}${wrapper}${selected}${wrapper}${after}`;
+      const offset = wrapper.length;
+      return {
+        text: newText,
+        selectionStart: selectionStart + offset,
+        selectionEnd: selectionEnd + offset,
+      };
+    });
+  };
+
+  const insertBullets = (bulletType: 'bulleted' | 'numbered') => {
+    withActiveTextArea(({ value, selectionStart, selectionEnd }) => {
+      const before = value.slice(0, selectionStart);
+      const selected = value.slice(selectionStart, selectionEnd) || '';
+      const after = value.slice(selectionEnd);
+      const lines = selected.split('\n');
+      const formattedLines = lines.map((line, index) => {
+        const content = line.trim().length ? line : 'Clause text';
+        if (bulletType === 'bulleted') {
+          return `• ${content}`;
+        }
+        return `${index + 1}. ${content}`;
+      });
+      const insertion = formattedLines.join('\n');
+      const newText = `${before}${insertion}${after}`;
+      const start = before.length;
+      const end = start + insertion.length;
+      return {
+        text: newText,
+        selectionStart: start,
+        selectionEnd: end,
+      };
+    });
+  };
+
+  const handleToolbarAction = (action: 'bold' | 'italic' | 'bullet' | 'numbered') => {
+    if (!canEdit || draft.length === 0) return;
+    switch (action) {
+      case 'bold':
+        wrapSelection('**');
+        break;
+      case 'italic':
+        wrapSelection('*');
+        break;
+      case 'bullet':
+        insertBullets('bulleted');
+        break;
+      case 'numbered':
+        insertBullets('numbered');
+        break;
+      default:
+        break;
+    }
+  };
+
   const handleRemove = (sectionId: string) => {
     setDraft((prev) => prev.filter((s) => s.id !== sectionId));
   };
@@ -225,7 +327,7 @@ const TemplateBuilder: React.FC = () => {
   };
 
   return (
-    <div className="p-10 h-full overflow-y-auto text-slate-900 dark:text-slate-200">
+    <div className="p-10 h-full overflow-y-auto text-slate-900 dark:text-slate-200 space-y-6">
       <div className="mb-8 flex items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white font-['Outfit']">
@@ -289,7 +391,7 @@ const TemplateBuilder: React.FC = () => {
           <Loader2 className="animate-spin text-brand" size={32} />
         </div>
       ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 xl:grid-cols-[320px_minmax(0,1fr)] gap-6">
           <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/5 rounded-xl shadow-sm dark:shadow-lg p-6 h-fit space-y-4">
             <div>
               <h2 className="font-bold text-slate-900 dark:text-white mb-2">Template Library</h2>
@@ -357,194 +459,202 @@ const TemplateBuilder: React.FC = () => {
             </div>
           </div>
 
-          <div className="xl:col-span-2 bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/5 rounded-xl p-8 relative overflow-hidden shadow-sm dark:shadow-2xl">
+          <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/5 rounded-xl shadow-sm dark:shadow-2xl relative overflow-hidden">
             <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
-            <div className="max-w-2xl mx-auto bg-white shadow-2xl rounded-lg overflow-hidden border border-slate-200 dark:border-0 min-h-[600px] flex flex-col relative z-10">
-              <div className="bg-slate-900 text-white p-5 flex flex-col gap-3 border-b border-slate-800">
-                <input
-                  type="text"
-                  value={templateMeta.name}
-                  onChange={(e) => setTemplateMeta({ ...templateMeta, name: e.target.value })}
-                  className="bg-transparent text-2xl font-semibold outline-none border-none focus:ring-0"
-                  placeholder="Template name"
-                  disabled={!canEdit}
-                />
-                <textarea
-                  value={templateMeta.description}
-                  onChange={(e) => setTemplateMeta({ ...templateMeta, description: e.target.value })}
-                  className="bg-transparent text-sm text-slate-300 outline-none border-none focus:ring-0"
-                  placeholder="Short description..."
-                  disabled={!canEdit}
-                  rows={2}
-                />
-                {branchOfficeId && canEdit && isOrgAdmin && (
-                  <div className="text-xs text-slate-300 flex items-center gap-2">
-                    Visibility:
-                    <select
-                      value={templateMeta.visibility}
-                      onChange={(e) =>
-                        setTemplateMeta({
-                          ...templateMeta,
-                          visibility: e.target.value as 'organization' | 'branch',
-                        })
-                      }
-                      className="bg-slate-800 text-white text-xs rounded px-2 py-1"
-                      disabled={!branchOfficeId}
+            <div className="relative z-10 flex flex-col h-full">
+              <div className="border-b border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-[#071029] px-6 py-4 flex flex-wrap gap-3 items-center justify-between">
+                <div className="flex flex-wrap gap-2 items-center">
+                  <button
+                    type="button"
+                    onClick={() => handleToolbarAction('bold')}
+                    disabled={!canEdit}
+                    className="px-3 py-1.5 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 text-sm font-semibold disabled:opacity-40"
+                  >
+                    B
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleToolbarAction('italic')}
+                    disabled={!canEdit}
+                    className="px-3 py-1.5 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 text-sm italic disabled:opacity-40"
+                  >
+                    I
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleToolbarAction('bullet')}
+                    disabled={!canEdit}
+                    className="px-3 py-1.5 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 text-sm disabled:opacity-40"
+                  >
+                    • List
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleToolbarAction('numbered')}
+                    disabled={!canEdit}
+                    className="px-3 py-1.5 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 text-sm disabled:opacity-40"
+                  >
+                    1. List
+                  </button>
+                </div>
+                {canEdit && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={handleAddSection}
+                      className="px-3 py-1.5 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 text-sm font-semibold flex items-center gap-1"
                     >
-                      <option value="branch">Branch Only</option>
-                      <option value="organization">Organization-wide</option>
-                    </select>
+                      <Plus size={14} /> Clause
+                    </button>
+                    <button
+                      onClick={handleSave}
+                      disabled={saving}
+                      className="px-4 py-1.5 rounded-lg bg-brand text-white text-sm font-semibold flex items-center gap-2 disabled:opacity-60"
+                    >
+                      {saving ? (
+                        <>
+                          <Loader2 size={14} className="animate-spin" /> Saving
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles size={14} /> Save
+                        </>
+                      )}
+                    </button>
                   </div>
                 )}
-                {isBranchAdmin && branchOfficeId && (
-              <p className="text-xs text-slate-400">
-                Branch scope only for office {branchOfficeId.slice(0, 8)}…
-              </p>
-                )}
               </div>
-              <div className="p-8 flex-1 space-y-4 bg-slate-50 overflow-y-auto">
-                {draft.map((block, index) => (
-                  <div
-                    key={block.id}
-                    className="bg-white border border-slate-200 p-5 rounded-lg shadow-sm flex flex-col gap-3 group"
-                  >
-                    <div className="flex items-center justify-between">
-                      <input
-                        type="text"
-                        value={block.title}
+
+              <div className="px-8 py-6 space-y-6 overflow-y-auto flex-1 bg-white dark:bg-[#020617]">
+                <div className="max-w-3xl mx-auto space-y-4">
+                  <input
+                    type="text"
+                    value={templateMeta.name}
+                    onChange={(e) => setTemplateMeta({ ...templateMeta, name: e.target.value })}
+                    placeholder="Template title"
+                    disabled={!canEdit}
+                    className="text-3xl font-semibold w-full bg-transparent border-none focus:ring-0"
+                  />
+                  <textarea
+                    value={templateMeta.description}
+                    onChange={(e) => setTemplateMeta({ ...templateMeta, description: e.target.value })}
+                    placeholder="Add a summary for this template..."
+                    disabled={!canEdit}
+                    rows={2}
+                    className="w-full text-sm text-slate-500 bg-transparent border-none focus:ring-0"
+                  />
+                  {isOrgAdmin && (
+                    <div className="flex items-center gap-2 text-xs text-slate-500">
+                      Visibility:
+                      <select
+                        value={templateMeta.visibility}
+                        disabled={!canEdit || isBranchAdmin}
                         onChange={(e) =>
-                          setDraft((prev) =>
-                            prev.map((s) =>
-                              s.id === block.id ? { ...s, title: e.target.value } : s
-                            )
-                          )
+                          setTemplateMeta({
+                            ...templateMeta,
+                            visibility: e.target.value as 'organization' | 'branch',
+                          })
                         }
-                        className="text-sm font-bold text-slate-800 border-none focus:ring-0 w-full bg-transparent"
-                        disabled={!canEdit}
-                      />
-                      {canEdit && (
-                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity ml-4">
-                          <button
-                            onClick={() => moveBlock(index, 'up')}
-                            className="p-2 text-slate-400 hover:text-brand bg-slate-50 hover:bg-brand/10 rounded-md transition-colors"
-                          >
-                            <ChevronUp size={16} />
-                          </button>
-                          <button
-                            onClick={() => moveBlock(index, 'down')}
-                            className="p-2 text-slate-400 hover:text-brand bg-slate-50 hover:bg-brand/10 rounded-md transition-colors"
-                          >
-                            <ChevronDown size={16} />
-                          </button>
-                          <div className="w-px h-5 bg-slate-200 mx-1"></div>
-                          <button
-                            onClick={() => handleDuplicate(block)}
-                            className="p-2 text-slate-400 hover:text-blue-600 bg-slate-50 hover:bg-blue-50 rounded-md transition-colors"
-                          >
-                            <Copy size={16} />
-                          </button>
-                          <button
-                            onClick={() => handleRemove(block.id)}
-                            className="p-2 text-slate-400 hover:text-red-600 bg-slate-50 hover:bg-red-50 rounded-md transition-colors"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      )}
+                        className="border border-slate-200 rounded-lg px-2 py-1 text-xs bg-white dark:bg-[#0f172a]"
+                      >
+                        <option value="organization">Organization</option>
+                        <option value="branch">Branch</option>
+                      </select>
                     </div>
-                    <textarea
-                      value={block.content}
-                      onChange={(e) =>
-                        setDraft((prev) =>
-                          prev.map((s) =>
-                            s.id === block.id ? { ...s, content: e.target.value } : s
-                          )
-                        )
-                      }
-                      className="w-full p-3 rounded-lg border border-slate-200 focus:border-brand focus:ring-2 focus:ring-brand/20 outline-none bg-white text-sm min-h-[120px]"
-                      placeholder="Clause language..."
-                      disabled={!canEdit}
-                    />
-                    {canEdit && (
-                      <label className="inline-flex items-center gap-2 text-xs text-slate-500">
+                  )}
+                </div>
+
+                <div className="max-w-3xl mx-auto space-y-6">
+                  {draft.map((block, index) => (
+                    <div
+                      key={block.id}
+                      className="border border-slate-200 dark:border-white/10 rounded-2xl bg-white dark:bg-[#050c1f] shadow-sm"
+                    >
+                      <div className="px-5 py-4 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
                         <input
-                          type="checkbox"
-                          checked={block.required}
+                          type="text"
+                          value={block.title}
                           onChange={(e) =>
                             setDraft((prev) =>
                               prev.map((s) =>
-                                s.id === block.id ? { ...s, required: e.target.checked } : s
+                                s.id === block.id ? { ...s, title: e.target.value } : s
                               )
                             )
                           }
+                          placeholder="Clause heading"
+                          disabled={!canEdit}
+                          className="text-base font-semibold bg-transparent border-none focus:ring-0 w-full"
                         />
-                        Required clause
-                      </label>
-                    )}
-                  </div>
-                ))}
-
-                {canEdit && (
-                  <button
-                    onClick={handleAddSection}
-                    className="w-full py-4 border-2 border-dashed border-slate-300 text-slate-400 rounded-lg hover:border-brand hover:text-brand hover:bg-brand/5 transition-all flex items-center justify-center gap-2 text-sm font-bold uppercase tracking-wide group"
-                  >
-                    <Plus size={16} className="group-hover:scale-110 transition-transform" /> Add Clause
-                  </button>
-                )}
-              </div>
-
-              {canEdit && (
-                <div className="border-t border-slate-200 p-5 flex items-center justify-between bg-slate-100">
-                  <p className="text-xs text-slate-500">Templates update instantly for your team.</p>
-                  <button
-                    onClick={handleSave}
-                    disabled={saving}
-                    className="px-4 py-2 rounded-xl bg-brand text-white font-semibold flex items-center gap-2 disabled:opacity-60"
-                  >
-                    {saving ? (
-                      <>
-                        <Loader2 className="animate-spin" size={16} /> Saving
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles size={16} /> Save Template
-                      </>
-                    )}
-                  </button>
+                        {canEdit && (
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => moveBlock(index, 'up')}
+                              className="p-2 text-slate-400 hover:text-brand"
+                              title="Move up"
+                            >
+                              <ChevronUp size={16} />
+                            </button>
+                            <button
+                              onClick={() => moveBlock(index, 'down')}
+                              className="p-2 text-slate-400 hover:text-brand"
+                              title="Move down"
+                            >
+                              <ChevronDown size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleDuplicate(block)}
+                              className="p-2 text-slate-400 hover:text-blue-500"
+                              title="Duplicate"
+                            >
+                              <Copy size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleRemove(block.id)}
+                              className="p-2 text-slate-400 hover:text-red-500"
+                              title="Remove"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      <div className="px-5 py-4 space-y-3">
+                        <textarea
+                          ref={(el) => {
+                            textAreaRefs.current[block.id] = el;
+                          }}
+                          value={block.content}
+                          onChange={(e) => updateClauseContent(block.id, e.target.value)}
+                          onFocus={() => setActiveClauseId(block.id)}
+                          placeholder="Write legal language here..."
+                          disabled={!canEdit}
+                          className="w-full min-h-[140px] bg-transparent border-none focus:ring-0 text-sm leading-relaxed whitespace-pre-wrap"
+                        />
+                        {canEdit && (
+                          <label className="inline-flex items-center gap-2 text-xs text-slate-500">
+                            <input
+                              type="checkbox"
+                              checked={block.required}
+                              onChange={(e) =>
+                                setDraft((prev) =>
+                                  prev.map((s) =>
+                                    s.id === block.id ? { ...s, required: e.target.checked } : s
+                                  )
+                                )
+                              }
+                            />
+                            Required clause
+                          </label>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {draft.length === 0 && (
+                    <div className="text-center text-sm text-slate-500 py-10 border border-dashed border-slate-300 rounded-2xl">
+                      No clauses yet. Use the clause library or toolbar to start building.
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
-          </div>
-
-          <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/5 rounded-xl p-6 shadow-sm dark:shadow-lg space-y-4">
-            <div>
-              <h2 className="font-bold text-slate-900 dark:text-white mb-1">Live Preview</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Shows how the template renders in Agreement Studio.
-              </p>
-            </div>
-            <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-6 space-y-4 max-h-[700px] overflow-y-auto">
-              <div className="text-center border-b border-slate-200 pb-4">
-                <h3 className="text-lg font-semibold">{templateMeta.name || 'Untitled Template'}</h3>
-                <p className="text-xs text-slate-500">{templateMeta.description || 'Preview of clause layout'}</p>
               </div>
-              {draft.length === 0 ? (
-                <p className="text-sm text-slate-500">Add clauses to see the preview.</p>
-              ) : (
-                draft.map((clause) => (
-                  <div key={clause.id} className="space-y-2">
-                    <p className="text-xs uppercase tracking-[0.4em] text-slate-400">
-                      {clause.required ? 'Required Clause' : 'Optional Clause'}
-                    </p>
-                    <p className="text-sm font-semibold text-slate-800">{clause.title}</p>
-                    <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
-                      {clause.content || 'Clause body goes here...'}
-                    </p>
-                    <div className="h-px bg-slate-200"></div>
-                  </div>
-                ))
-              )}
             </div>
           </div>
         </div>
