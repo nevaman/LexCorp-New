@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   BarChart,
   Bar,
@@ -11,10 +11,12 @@ import {
   Pie,
   Cell,
   LineChart,
-  Line
+  Line,
 } from 'recharts';
-import { Agreement, AgreementStatus } from '../types';
+import { Agreement, AgreementStatus, RiskLevel } from '../types';
 import { AlertTriangle, CheckCircle2, Clock, FileText } from '../components/ui/Icons';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../services/supabaseClient';
 
 interface AnalyticsViewProps {
   agreements: Agreement[];
@@ -22,30 +24,129 @@ interface AnalyticsViewProps {
 
 const COLORS = ['#f97316', '#10b981', '#3b82f6', '#ef4444', '#8b5cf6'];
 
+const monthKey = (isoDate: string) => {
+  const date = new Date(isoDate);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+};
+
+const prettyMonth = (isoKey: string) => {
+  const [year, month] = isoKey.split('-').map(Number);
+  const date = new Date(year, (month ?? 1) - 1, 1);
+  return date.toLocaleString('default', { month: 'short' });
+};
+
 const AnalyticsView: React.FC<AnalyticsViewProps> = ({ agreements }) => {
-  const statusData = [
-    { name: 'Active', value: agreements.filter(a => a.status === AgreementStatus.ACTIVE).length + 12 },
-    { name: 'Draft', value: agreements.filter(a => a.status === AgreementStatus.DRAFT).length + 5 },
-    { name: 'Review', value: agreements.filter(a => a.status === AgreementStatus.REVIEW).length + 8 },
-    { name: 'Expired', value: 4 },
-  ];
+  const { organization, isOrgAdmin } = useAuth();
+  const [officeMap, setOfficeMap] = useState<Record<string, string>>({});
 
-  const deptData = [
-    { name: 'Sales', value: 45 },
-    { name: 'HR', value: 23 },
-    { name: 'IT', value: 12 },
-    { name: 'Ops', value: 34 },
-    { name: 'Legal', value: 18 },
-  ];
+  useEffect(() => {
+    const loadOffices = async () => {
+      if (!organization?.id || !isOrgAdmin) return;
+      const { data } = await supabase
+        .from('branch_offices')
+        .select('id, identifier, location')
+        .eq('organization_id', organization.id);
+      if (data) {
+        const map = data.reduce<Record<string, string>>((acc, office) => {
+          acc[office.id] = `${office.identifier}${office.location ? ` • ${office.location}` : ''}`;
+          return acc;
+        }, {});
+        setOfficeMap(map);
+      }
+    };
+    loadOffices();
+  }, [organization?.id, isOrgAdmin]);
 
-  const cycleTimeData = [
-    { month: 'Jan', days: 14 },
-    { month: 'Feb', days: 12 },
-    { month: 'Mar', days: 18 },
-    { month: 'Apr', days: 10 },
-    { month: 'May', days: 8 },
-    { month: 'Jun', days: 9 },
-  ];
+  const totalAgreements = agreements.length;
+  const expiringSoon = agreements.filter((agreement) => {
+    if (!agreement.renewalDate) return false;
+    const diff =
+      new Date(agreement.renewalDate).getTime() - new Date().getTime();
+    const days = diff / (1000 * 60 * 60 * 24);
+    return days >= 0 && days <= 30;
+  }).length;
+
+  const highRiskCount = agreements.filter(
+    (agreement) => agreement.riskLevel === RiskLevel.HIGH
+  ).length;
+
+  const statusCounts = agreements.reduce<Record<string, number>>((acc, agreement) => {
+    acc[agreement.status] = (acc[agreement.status] || 0) + 1;
+    return acc;
+  }, {});
+
+  const statusData = Object.values(AgreementStatus).map((status) => ({
+    name: status,
+    value: statusCounts[status] || 0,
+  }));
+
+  const officeVolumeData = useMemo(() => {
+    const counts = agreements.reduce<Record<string, number>>((acc, agreement) => {
+      const key = agreement.branchOfficeId || 'unassigned';
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+
+    return Object.entries(counts).map(([officeId, value]) => ({
+      name:
+        officeId === 'unassigned'
+          ? 'Unassigned'
+          : officeMap[officeId] || `Office ${officeId.slice(0, 4)}`,
+      value,
+    }));
+  }, [agreements, officeMap]);
+
+  const departmentVolumeData = useMemo(() => {
+    const counts = agreements.reduce<Record<string, number>>((acc, agreement) => {
+      const dept = agreement.department || 'Unassigned';
+      acc[dept] = (acc[dept] || 0) + 1;
+      return acc;
+    }, {});
+
+    return Object.entries(counts).map(([department, value]) => ({
+      name: department,
+      value,
+    }));
+  }, [agreements]);
+
+  const volumeData = isOrgAdmin ? officeVolumeData : departmentVolumeData;
+  const volumeTitle = isOrgAdmin ? 'Volume by Office' : 'Volume by Department';
+
+  const cycleBuckets = agreements.reduce<Record<
+    string,
+    { totalDays: number; count: number }
+  >>((acc, agreement) => {
+    if (!agreement.createdAt || !agreement.updatedAt) return acc;
+    const cycle =
+      (new Date(agreement.updatedAt).getTime() -
+        new Date(agreement.createdAt).getTime()) /
+      (1000 * 60 * 60 * 24);
+    if (!Number.isFinite(cycle) || cycle <= 0) return acc;
+    const key = monthKey(agreement.createdAt);
+    const bucket = acc[key] || { totalDays: 0, count: 0 };
+    bucket.totalDays += cycle;
+    bucket.count += 1;
+    acc[key] = bucket;
+    return acc;
+  }, {});
+
+  const cycleTimeData = Object.entries(cycleBuckets)
+    .sort(([a], [b]) => (a > b ? 1 : -1))
+    .slice(-6)
+    .map(([key, bucket]) => ({
+      month: prettyMonth(key),
+      days: bucket.count ? Number((bucket.totalDays / bucket.count).toFixed(1)) : 0,
+    }));
+
+  const avgCycleTime =
+    cycleTimeData.length === 0
+      ? 0
+      : Number(
+          (
+            cycleTimeData.reduce((sum, item) => sum + item.days, 0) /
+            cycleTimeData.length
+          ).toFixed(1)
+        );
 
   return (
     <div className="p-10 space-y-8 max-w-[1600px] mx-auto text-slate-900 dark:text-slate-200">
@@ -71,9 +172,11 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ agreements }) => {
                 <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Total Agreements</h3>
                 <div className="p-2 bg-blue-50 dark:bg-blue-500/10 text-blue-500 dark:text-blue-400 rounded-lg"><FileText size={20} /></div>
             </div>
-            <div className="text-4xl font-bold text-slate-900 dark:text-white font-['Outfit']">142</div>
+            <div className="text-4xl font-bold text-slate-900 dark:text-white font-['Outfit']">
+              {totalAgreements}
+            </div>
             <div className="text-xs text-emerald-600 dark:text-emerald-400 font-bold mt-3 flex items-center bg-emerald-50 dark:bg-emerald-500/10 w-fit px-2 py-1 rounded">
-                +12% vs last month
+                Current total
             </div>
           </div>
         </div>
@@ -84,9 +187,11 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ agreements }) => {
                 <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Expiring (30 Days)</h3>
                 <div className="p-2 bg-brand/10 text-brand rounded-lg"><Clock size={20} /></div>
             </div>
-            <div className="text-4xl font-bold text-slate-900 dark:text-white font-['Outfit']">8</div>
+            <div className="text-4xl font-bold text-slate-900 dark:text-white font-['Outfit']">
+              {expiringSoon}
+            </div>
             <div className="text-xs text-brand font-bold mt-3 flex items-center bg-brand/10 w-fit px-2 py-1 rounded">
-                Action required
+                Expire in 30 days
             </div>
           </div>
         </div>
@@ -97,9 +202,12 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ agreements }) => {
                 <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Avg Cycle Time</h3>
                 <div className="p-2 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 rounded-lg"><CheckCircle2 size={20} /></div>
             </div>
-            <div className="text-4xl font-bold text-slate-900 dark:text-white font-['Outfit']">9.2 <span className="text-xl font-normal text-slate-400 dark:text-slate-500">days</span></div>
+            <div className="text-4xl font-bold text-slate-900 dark:text-white font-['Outfit']">
+              {avgCycleTime || '—'}{' '}
+              <span className="text-xl font-normal text-slate-400 dark:text-slate-500">days</span>
+            </div>
             <div className="text-xs text-emerald-600 dark:text-emerald-400 font-bold mt-3 flex items-center bg-emerald-50 dark:bg-emerald-500/10 w-fit px-2 py-1 rounded">
-                -1.5 days improvement
+                Avg from completed
             </div>
            </div>
         </div>
@@ -110,9 +218,11 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ agreements }) => {
                 <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">High Risk</h3>
                 <div className="p-2 bg-red-50 dark:bg-red-500/10 text-red-500 dark:text-red-400 rounded-lg"><AlertTriangle size={20} /></div>
             </div>
-            <div className="text-4xl font-bold text-slate-900 dark:text-white font-['Outfit']">5</div>
+            <div className="text-4xl font-bold text-slate-900 dark:text-white font-['Outfit']">
+              {highRiskCount}
+            </div>
             <div className="text-xs text-red-600 dark:text-red-400 font-bold mt-3 flex items-center bg-red-50 dark:bg-red-500/10 w-fit px-2 py-1 rounded">
-                Legal Audit Pending
+                High-risk agreements
             </div>
           </div>
         </div>
@@ -184,9 +294,9 @@ const AnalyticsView: React.FC<AnalyticsViewProps> = ({ agreements }) => {
       </div>
 
        <div className="bg-white dark:bg-[#0f172a] p-8 rounded-xl border border-slate-200 dark:border-white/5 shadow-sm dark:shadow-lg h-96">
-          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6 font-['Outfit']">Volume by Department</h3>
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-6 font-['Outfit']">{volumeTitle}</h3>
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={deptData}>
+            <BarChart data={volumeData}>
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148, 163, 184, 0.2)" />
               <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
               <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />

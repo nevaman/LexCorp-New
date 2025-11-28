@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Agreement,
   AgreementStatus,
@@ -44,6 +44,34 @@ const defaultSections: Clause[] = [
   { id: '5', title: 'Governing Law', content: 'This Agreement shall be governed by the laws of the State of Delaware.', type: 'standard' },
 ];
 
+const MAX_PAGE_CHARACTER_FOOTPRINT = 2200;
+
+const paginateSections = (clauses: Clause[]) => {
+  const pages: Clause[][] = [];
+  let current: Clause[] = [];
+  let footprint = 0;
+
+  clauses.forEach((clause) => {
+    const weight =
+      (clause.content?.length || 0) + (clause.title?.length || 0) + 400;
+
+    if (current.length && footprint + weight > MAX_PAGE_CHARACTER_FOOTPRINT) {
+      pages.push(current);
+      current = [];
+      footprint = 0;
+    }
+
+    current.push(clause);
+    footprint += weight;
+  });
+
+  if (current.length) {
+    pages.push(current);
+  }
+
+  return pages.length ? pages : [[]];
+};
+
 const AgreementGenerator: React.FC<GeneratorProps> = ({
   onSave,
   onBack,
@@ -87,6 +115,7 @@ const AgreementGenerator: React.FC<GeneratorProps> = ({
     scope: isOrgAdmin ? 'organization' : 'branch',
     branchOfficeId: branchOfficeId ?? '',
   });
+  const paginatedSections = useMemo(() => paginateSections(sections), [sections]);
   useEffect(() => {
     const loadTemplates = async () => {
       if (!organization) return;
@@ -893,109 +922,159 @@ const AgreementGenerator: React.FC<GeneratorProps> = ({
         </div>
       </div>
 
-      {/* Center: Editor (A4 Paper Representation) */}
-      <div className="flex-1 overflow-y-auto p-8 relative bg-slate-200 dark:bg-[#020617] flex flex-col items-center">
-         {/* Background Desk Texture */}
-         <div className="absolute inset-0 opacity-5 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+            {/* Center: Editor (Paginated A4 Representation) */}
+            <div className="flex-1 overflow-y-auto p-8 relative bg-slate-200 dark:bg-[#020617] flex flex-col items-center">
+              <div className="absolute inset-0 opacity-5 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+              <div className="space-y-12">
+                {paginatedSections.map((pageClauses, pageIndex) => {
+                  const isLastPage = pageIndex === paginatedSections.length - 1;
+                  return (
+                    <div key={`page-${pageIndex}`} className="w-full flex flex-col items-center">
+                      <div
+                        className="a4-page transition-all"
+                        style={{ fontFamily: brandSettings.fontFamily }}
+                      >
+                        <div
+                          className="flex justify-between items-end mb-16 border-b-4 pb-6"
+                          style={{ borderColor: brandSettings.primaryColor }}
+                        >
+                          <div>
+                            {brandSettings.logoUrl ? (
+                              <img src={brandSettings.logoUrl} alt="Logo" className="h-12 mb-4" />
+                            ) : (
+                              <div className="text-3xl font-serif font-black tracking-tight mb-2 text-slate-900">
+                                {brandSettings.companyName.toUpperCase()}
+                              </div>
+                            )}
+                            <div className="text-xs font-bold tracking-[0.3em] text-slate-500 uppercase">
+                              Legal Binding Document
+                            </div>
+                          </div>
+                          <div className="text-right text-xs text-slate-400 font-mono">
+                            <p>REF: {initialData?.id.slice(0, 8).toUpperCase() || 'DFT-INIT-001'}</p>
+                            <p>DATE: {new Date().toLocaleDateString()}</p>
+                          </div>
+                        </div>
 
-         {/* A4 PAGE 1 */}
-         <div className="a4-page transition-all" style={{ fontFamily: brandSettings.fontFamily }}>
-            
-            {/* Header Branding on Paper */}
-            <div className="flex justify-between items-end mb-16 border-b-4 pb-6" style={{ borderColor: brandSettings.primaryColor }}>
-                 <div>
-                     {brandSettings.logoUrl ? (
-                       <img src={brandSettings.logoUrl} alt="Logo" className="h-12 mb-4" />
-                     ) : (
-                       <div className="text-3xl font-serif font-black tracking-tight mb-2 text-slate-900">{brandSettings.companyName.toUpperCase()}</div>
-                     )}
-                     <div className="text-xs font-bold tracking-[0.3em] text-slate-500 uppercase">Legal Binding Document</div>
-                 </div>
-                 <div className="text-right text-xs text-slate-400 font-mono">
-                     <p>REF: {initialData?.id.slice(0,8).toUpperCase() || "DFT-INIT-001"}</p>
-                     <p>DATE: {new Date().toLocaleDateString()}</p>
-                 </div>
-            </div>
+                        <div className="mb-12 text-center">
+                          <h1 className="text-2xl font-bold text-slate-900 mb-4 uppercase tracking-wide">
+                            {title}
+                          </h1>
+                          <p className="text-slate-500 font-serif italic text-lg">
+                            Between{' '}
+                            <span className="font-bold text-slate-900">
+                              {brandSettings.companyName}
+                            </span>{' '}
+                            and{' '}
+                            <span className="font-bold text-slate-900">
+                              {counterparty || '[Counterparty Name]'}
+                            </span>
+                          </p>
+                        </div>
 
-            <div className="mb-12 text-center">
-                <h1 className="text-2xl font-bold text-slate-900 mb-4 uppercase tracking-wide">{title}</h1>
-                <p className="text-slate-500 font-serif italic text-lg">Between <span className="font-bold text-slate-900">{brandSettings.companyName}</span> and <span className="font-bold text-slate-900">{counterparty || "[Counterparty Name]"}</span></p>
-            </div>
-
-            {/* Sections Container */}
-            <div className="space-y-8 text-slate-800">
-                {sections.map((section, index) => (
-                    <div key={section.id} className="group relative transition-all">
-                        
-                        {/* Simulated Page Break logic for visual effect if index is high (Demo purposes) */}
-                        {index === 3 && <div className="page-break-marker" />}
-
-                        <div className="flex justify-between items-center mb-2">
-                            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-1">{section.title}</h3>
-                            
-                            {/* Floating Action Button for Clause */}
-                            <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200">
-                                <button 
+                        <div className="space-y-8 text-slate-800">
+                          {pageClauses.map((section) => (
+                            <div key={section.id} className="group relative transition-all">
+                              <div className="flex justify-between items-center mb-2">
+                                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider border-b border-slate-200 pb-1">
+                                  {section.title}
+                                </h3>
+                                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200">
+                                  <button
                                     onClick={() => handleGenerateClause(section.id, section.title)}
                                     disabled={isGenerating === section.id}
                                     className={`text-[10px] px-2 py-1 rounded flex items-center gap-1 border transition-all font-bold uppercase tracking-wide ${
-                                      isGenerating === section.id 
-                                      ? 'bg-brand/10 border-brand/30 text-brand cursor-wait' 
-                                      : 'bg-white border-slate-200 text-slate-500 hover:border-brand hover:text-brand shadow-sm'
+                                      isGenerating === section.id
+                                        ? 'bg-brand/10 border-brand/30 text-brand cursor-wait'
+                                        : 'bg-white border-slate-200 text-slate-500 hover:border-brand hover:text-brand shadow-sm'
                                     }`}
-                                >
-                                    <Sparkles size={10} className={isGenerating === section.id ? "animate-spin" : ""} /> 
+                                  >
+                                    <Sparkles
+                                      size={10}
+                                      className={isGenerating === section.id ? 'animate-spin' : ''}
+                                    />
                                     {isGenerating === section.id ? 'Drafting...' : 'AI Rewrite'}
-                                </button>
+                                  </button>
+                                </div>
+                              </div>
+                              <textarea
+                                value={section.content}
+                                onChange={(e) => {
+                                  const newVal = e.target.value;
+                                  setSections((prev) =>
+                                    prev.map((s) =>
+                                      s.id === section.id
+                                        ? { ...s, content: newVal, type: 'custom' }
+                                        : s
+                                    )
+                                  );
+                                }}
+                                placeholder={`Enter ${section.title} details here...`}
+                                className="w-full min-h-[80px] bg-transparent hover:bg-slate-50 focus:bg-slate-50 p-2 -ml-2 rounded text-[14px] leading-relaxed text-slate-800 border-none focus:ring-0 resize-none overflow-hidden transition-colors placeholder:italic placeholder:text-slate-300"
+                                rows={Math.max(3, section.content.split('\n').length)}
+                              />
                             </div>
+                          ))}
+
+                          {isLastPage && (
+                            <button
+                              onClick={() =>
+                                setSections((prev) => [
+                                  ...prev,
+                                  {
+                                    id: Date.now().toString(),
+                                    title: 'New Section',
+                                    content: '',
+                                    type: 'custom',
+                                  },
+                                ])
+                              }
+                              className="w-full py-4 border-2 border-dashed border-slate-200 text-slate-400 rounded-lg hover:border-brand hover:text-brand hover:bg-brand/5 transition-all flex items-center justify-center gap-2 group mt-8"
+                            >
+                              <span className="w-5 h-5 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center group-hover:bg-brand/20 group-hover:text-brand transition-colors">
+                                +
+                              </span>
+                              <span className="font-medium text-sm">Add Next Clause</span>
+                            </button>
+                          )}
                         </div>
-                        <textarea
-                            value={section.content}
-                            onChange={(e) => {
-                                const newVal = e.target.value;
-                                setSections(prev => prev.map(s => s.id === section.id ? { ...s, content: newVal, type: 'custom' } : s));
-                            }}
-                            placeholder={`Enter ${section.title} details here...`}
-                            className="w-full min-h-[80px] bg-transparent hover:bg-slate-50 focus:bg-slate-50 p-2 -ml-2 rounded text-[14px] leading-relaxed text-slate-800 border-none focus:ring-0 resize-none overflow-hidden transition-colors placeholder:italic placeholder:text-slate-300"
-                            rows={Math.max(3, section.content.split('\n').length)}
-                        />
-                    </div>
-                ))}
 
-                {/* Add Section Button */}
-                <button 
-                    onClick={() => setSections([...sections, { id: Date.now().toString(), title: 'New Section', content: '', type: 'custom' }])}
-                    className="w-full py-4 border-2 border-dashed border-slate-200 text-slate-400 rounded-lg hover:border-brand hover:text-brand hover:bg-brand/5 transition-all flex items-center justify-center gap-2 group mt-8"
-                >
-                    <span className="w-5 h-5 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center group-hover:bg-brand/20 group-hover:text-brand transition-colors">+</span> 
-                    <span className="font-medium text-sm">Add Next Clause</span>
-                </button>
+                        {isLastPage && (
+                          <div className="mt-24 pt-12 border-t-4 border-slate-900 grid grid-cols-2 gap-16">
+                            <div>
+                              <p className="text-sm font-bold text-slate-900 mb-16">
+                                {brandSettings.companyName}
+                              </p>
+                              <div className="border-t border-slate-400 pt-3">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                  Authorized Signature
+                                </p>
+                              </div>
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-slate-900 mb-16">
+                                {counterparty || 'Counterparty Name'}
+                              </p>
+                              <div className="border-t border-slate-400 pt-3">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                  Authorized Signature
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="absolute bottom-4 right-8 text-[10px] text-slate-400 font-mono">
+                          Page {pageIndex + 1} of {paginatedSections.length}
+                        </div>
+                      </div>
+                      <div className="w-[200mm] h-2 bg-white/50 dark:bg-white/5 rounded-b mx-auto -mt-8 shadow-md"></div>
+                      <div className="w-[190mm] h-2 bg-white/30 dark:bg-white/5 rounded-b mx-auto -mt-2 shadow-sm"></div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-
-            {/* Signatures (Pushed to bottom or next page) */}
-            <div className="mt-24 pt-12 border-t-4 border-slate-900 grid grid-cols-2 gap-16">
-                <div>
-                    <p className="text-sm font-bold text-slate-900 mb-16">{brandSettings.companyName}</p>
-                    <div className="border-t border-slate-400 pt-3">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Authorized Signature</p>
-                    </div>
-                </div>
-                <div>
-                    <p className="text-sm font-bold text-slate-900 mb-16">{counterparty || "Counterparty Name"}</p>
-                    <div className="border-t border-slate-400 pt-3">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Authorized Signature</p>
-                    </div>
-                </div>
-            </div>
-            
-            {/* Page Number Footer */}
-            <div className="absolute bottom-4 right-8 text-[10px] text-slate-400 font-mono">Page 1 of 1</div>
-         </div>
-
-         {/* Visual Stack Effect under the page */}
-         <div className="w-[200mm] h-2 bg-white/50 dark:bg-white/5 rounded-b mx-auto -mt-8 shadow-md"></div>
-         <div className="w-[190mm] h-2 bg-white/30 dark:bg-white/5 rounded-b mx-auto -mt-2 shadow-sm"></div>
-      </div>
 
       {/* Right Sidebar: Tools */}
       <div className="w-72 bg-white dark:bg-[#0f172a] border-l border-slate-200 dark:border-white/5 flex flex-col shadow-xl z-10">
