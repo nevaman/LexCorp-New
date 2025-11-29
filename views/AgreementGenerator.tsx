@@ -28,6 +28,7 @@ import { fetchVendors, createVendor } from '../services/vendorService';
 import { fetchProjects, createProject } from '../services/projectService';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../services/supabaseClient';
+import { RichTextEditor } from '../components/RichTextEditor';
 
 interface GeneratorProps {
   onSave: (agreement: Agreement) => Promise<void>;
@@ -997,22 +998,23 @@ const AgreementGenerator: React.FC<GeneratorProps> = ({
                                   </button>
                                 </div>
                               </div>
-                              <textarea
-                                value={section.content}
-                                onChange={(e) => {
-                                  const newVal = e.target.value;
-                                  setSections((prev) =>
-                                    prev.map((s) =>
-                                      s.id === section.id
-                                        ? { ...s, content: newVal, type: 'custom' }
-                                        : s
-                                    )
-                                  );
-                                }}
-                                placeholder={`Enter ${section.title} details here...`}
-                                className="w-full min-h-[80px] bg-transparent hover:bg-slate-50 focus:bg-slate-50 p-2 -ml-2 rounded text-[14px] leading-relaxed text-slate-800 border-none focus:ring-0 resize-none overflow-hidden transition-colors placeholder:italic placeholder:text-slate-300"
-                                rows={Math.max(3, section.content.split('\n').length)}
-                              />
+                              <div className="ml-[-8px]">
+                                <RichTextEditor
+                                  value={section.content}
+                                  onChange={(html) => {
+                                    setSections((prev) =>
+                                      prev.map((s) =>
+                                        s.id === section.id
+                                          ? { ...s, content: html, type: 'custom' }
+                                          : s
+                                      )
+                                    );
+                                  }}
+                                  placeholder={`Enter ${section.title} details here...`}
+                                  disabled={false}
+                                  minHeight="80px"
+                                />
+                              </div>
                             </div>
                           ))}
 
