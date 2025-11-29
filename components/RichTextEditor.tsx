@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect, useCallback, useState } from 'react';
 import {
   Bold,
   Italic,
@@ -12,6 +12,8 @@ import {
   AlignRight,
   Indent,
   Outdent,
+  Plus,
+  Trash2,
 } from './ui/Icons';
 
 interface RichTextEditorProps {
@@ -33,6 +35,7 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 }) => {
   const editorRef = useRef<HTMLDivElement>(null);
   const isUpdatingRef = useRef(false);
+  const [hoveredTable, setHoveredTable] = useState<HTMLTableElement | null>(null);
 
   useEffect(() => {
     if (editorRef.current && !isUpdatingRef.current) {
@@ -41,6 +44,33 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
       }
     }
   }, [value]);
+
+  useEffect(() => {
+    const handleMouseOver = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      const table = target.closest('table');
+      if (table && editorRef.current?.contains(table)) {
+        setHoveredTable(table);
+      }
+    };
+
+    const handleMouseOut = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('table')) {
+        setHoveredTable(null);
+      }
+    };
+
+    const editor = editorRef.current;
+    if (editor) {
+      editor.addEventListener('mouseover', handleMouseOver);
+      editor.addEventListener('mouseout', handleMouseOut);
+      return () => {
+        editor.removeEventListener('mouseover', handleMouseOver);
+        editor.removeEventListener('mouseout', handleMouseOut);
+      };
+    }
+  }, []);
 
   const handleInput = useCallback(() => {
     if (editorRef.current) {
@@ -64,12 +94,12 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
     if (disabled) return;
     const rows = 3;
     const cols = 3;
-    let tableHTML = '<table style="border-collapse: collapse; width: 100%; margin: 16px 0; border: 1px solid #cbd5e1;">';
+    let tableHTML = '<table class="editor-table" style="border-collapse: collapse; width: 100%; margin: 16px 0; border: 1px solid #cbd5e1; position: relative;">';
 
     for (let i = 0; i < rows; i++) {
       tableHTML += '<tr>';
       for (let j = 0; j < cols; j++) {
-        const cellStyle = 'border: 1px solid #cbd5e1; padding: 8px; ' + (i === 0 ? 'background: #f1f5f9; font-weight: 600;' : '');
+        const cellStyle = 'border: 1px solid #cbd5e1; padding: 8px; min-width: 80px; ' + (i === 0 ? 'background: #f1f5f9; font-weight: 600;' : '');
         tableHTML += `<td style="${cellStyle}" contenteditable="true">${i === 0 ? `Header ${j + 1}` : 'Cell'}</td>`;
       }
       tableHTML += '</tr>';
@@ -78,6 +108,55 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
 
     document.execCommand('insertHTML', false, tableHTML);
     handleInput();
+  };
+
+  const addTableRow = (table: HTMLTableElement) => {
+    const newRow = table.insertRow();
+    const colCount = table.rows[0]?.cells.length || 3;
+    for (let i = 0; i < colCount; i++) {
+      const cell = newRow.insertCell();
+      cell.setAttribute('contenteditable', 'true');
+      cell.style.border = '1px solid #cbd5e1';
+      cell.style.padding = '8px';
+      cell.style.minWidth = '80px';
+      cell.textContent = 'Cell';
+    }
+    handleInput();
+  };
+
+  const addTableColumn = (table: HTMLTableElement) => {
+    for (let i = 0; i < table.rows.length; i++) {
+      const cell = table.rows[i].insertCell();
+      cell.setAttribute('contenteditable', 'true');
+      cell.style.border = '1px solid #cbd5e1';
+      cell.style.padding = '8px';
+      cell.style.minWidth = '80px';
+      if (i === 0) {
+        cell.style.background = '#f1f5f9';
+        cell.style.fontWeight = '600';
+        cell.textContent = `Header ${table.rows[i].cells.length}`;
+      } else {
+        cell.textContent = 'Cell';
+      }
+    }
+    handleInput();
+  };
+
+  const deleteTableRow = (table: HTMLTableElement) => {
+    if (table.rows.length > 1) {
+      table.deleteRow(table.rows.length - 1);
+      handleInput();
+    }
+  };
+
+  const deleteTableColumn = (table: HTMLTableElement) => {
+    const colCount = table.rows[0]?.cells.length || 0;
+    if (colCount > 1) {
+      for (let i = 0; i < table.rows.length; i++) {
+        table.rows[i].deleteCell(colCount - 1);
+      }
+      handleInput();
+    }
   };
 
   const formatBlock = (tag: string) => {
@@ -238,19 +317,82 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           <Table size={16} />
         </button>
       </div>
-      <div
-        ref={editorRef}
-        contentEditable={!disabled}
-        onInput={handleInput}
-        onFocus={onFocus}
-        onKeyDown={handleKeyDown}
-        className="rich-text-editor-content p-4 outline-none"
-        style={{
-          minHeight,
-          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-        }}
-        data-placeholder={placeholder}
-      />
+      <div className="relative">
+        <div
+          ref={editorRef}
+          contentEditable={!disabled}
+          onInput={handleInput}
+          onFocus={onFocus}
+          onKeyDown={handleKeyDown}
+          className="rich-text-editor-content p-4 outline-none"
+          style={{
+            minHeight,
+            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+          }}
+          data-placeholder={placeholder}
+        />
+        {hoveredTable && !disabled && (
+          <div
+            className="absolute bg-white dark:bg-[#0f172a] border border-slate-300 dark:border-white/20 rounded-lg shadow-lg p-2 flex gap-1 z-50"
+            style={{
+              top: hoveredTable.getBoundingClientRect().top - editorRef.current!.getBoundingClientRect().top - 40,
+              left: hoveredTable.getBoundingClientRect().left - editorRef.current!.getBoundingClientRect().left,
+            }}
+            onMouseEnter={() => setHoveredTable(hoveredTable)}
+            onMouseLeave={() => setHoveredTable(null)}
+          >
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                addTableRow(hoveredTable);
+              }}
+              title="Add Row"
+              className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-white/10 text-green-600"
+            >
+              <Plus size={14} />
+              <span className="text-xs ml-1">Row</span>
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                addTableColumn(hoveredTable);
+              }}
+              title="Add Column"
+              className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-white/10 text-green-600"
+            >
+              <Plus size={14} />
+              <span className="text-xs ml-1">Col</span>
+            </button>
+            <div className="w-px h-6 bg-slate-300 dark:bg-white/10 mx-1"></div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                deleteTableRow(hoveredTable);
+              }}
+              title="Delete Row"
+              className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-white/10 text-red-600"
+            >
+              <Trash2 size={14} />
+              <span className="text-xs ml-1">Row</span>
+            </button>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                deleteTableColumn(hoveredTable);
+              }}
+              title="Delete Column"
+              className="p-1.5 rounded hover:bg-slate-100 dark:hover:bg-white/10 text-red-600"
+            >
+              <Trash2 size={14} />
+              <span className="text-xs ml-1">Col</span>
+            </button>
+          </div>
+        )}
+      </div>
       <style>{`
         .rich-text-editor-content {
           font-size: 16px;
@@ -277,14 +419,28 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
         .rich-text-editor-content p {
           margin: 0 0 0.75em 0;
         }
-        .rich-text-editor-content ul,
+        .rich-text-editor-content ul {
+          margin: 0.5em 0;
+          padding-left: 2em;
+          list-style-type: disc;
+          list-style-position: outside;
+        }
         .rich-text-editor-content ol {
           margin: 0.5em 0;
           padding-left: 2em;
+          list-style-type: decimal;
+          list-style-position: outside;
+        }
+        .rich-text-editor-content ul ul {
+          list-style-type: circle;
+        }
+        .rich-text-editor-content ol ol {
+          list-style-type: lower-alpha;
         }
         .rich-text-editor-content li {
           margin: 0.25em 0;
           line-height: 1.6;
+          display: list-item;
         }
         .rich-text-editor-content table {
           border-collapse: collapse;
@@ -292,21 +448,26 @@ export const RichTextEditor: React.FC<RichTextEditorProps> = ({
           margin: 16px 0;
           border: 1px solid #cbd5e1;
         }
-        .rich-text-editor-content td {
+        .rich-text-editor-content td,
+        .rich-text-editor-content th {
           border: 1px solid #cbd5e1;
           padding: 8px;
+          min-width: 80px;
         }
-        .rich-text-editor-content tr:first-child td {
+        .rich-text-editor-content tr:first-child td,
+        .rich-text-editor-content tr:first-child th {
           background: #f1f5f9;
           font-weight: 600;
         }
         .dark .rich-text-editor-content table {
           border-color: rgba(255, 255, 255, 0.1);
         }
-        .dark .rich-text-editor-content td {
+        .dark .rich-text-editor-content td,
+        .dark .rich-text-editor-content th {
           border-color: rgba(255, 255, 255, 0.1);
         }
-        .dark .rich-text-editor-content tr:first-child td {
+        .dark .rich-text-editor-content tr:first-child td,
+        .dark .rich-text-editor-content tr:first-child th {
           background: rgba(255, 255, 255, 0.05);
         }
       `}</style>
