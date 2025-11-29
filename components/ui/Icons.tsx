@@ -49,6 +49,15 @@ import {
   ClipboardList,
   ChevronLeft,
   ChevronRight,
+  Eye,
+  Edit3,
+  Undo,
+  Redo,
+  List,
+  ListOrdered,
+  Bold,
+  Italic,
+  Underline,
 } from 'lucide-react';
 
 export {
@@ -102,5 +111,14 @@ export {
   ClipboardList,
   ChevronLeft,
   ChevronRight,
+  Eye,
+  Edit3,
+  Undo,
+  Redo,
+  List,
+  ListOrdered,
+  Bold,
+  Italic,
+  Underline,
 };
 

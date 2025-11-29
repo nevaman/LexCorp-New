@@ -7,6 +7,16 @@ import {
   Copy,
   Loader2,
   Sparkles,
+  Eye,
+  Edit3,
+  Undo,
+  Redo,
+  Type,
+  List,
+  ListOrdered,
+  Bold,
+  Italic,
+  Underline,
 } from '../components/ui/Icons';
 import { useAuth } from '../contexts/AuthContext';
 import { Template } from '../types';
@@ -71,6 +81,9 @@ const TemplateBuilder: React.FC = () => {
     visibility: 'organization' as 'organization' | 'branch',
   });
   const [activeClauseId, setActiveClauseId] = useState<string | null>(null);
+  const [previewMode, setPreviewMode] = useState(false);
+  const [undoStack, setUndoStack] = useState<DraftSection[][]>([]);
+  const [redoStack, setRedoStack] = useState<DraftSection[][]>([]);
   const textAreaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
 
   const isOrgAdmin = memberRole === 'org_admin';
@@ -175,6 +188,27 @@ const TemplateBuilder: React.FC = () => {
     ]);
   };
 
+  const saveToUndoStack = () => {
+    setUndoStack((prev) => [...prev, draft]);
+    setRedoStack([]);
+  };
+
+  const handleUndo = () => {
+    if (undoStack.length === 0) return;
+    const previous = undoStack[undoStack.length - 1];
+    setRedoStack((prev) => [draft, ...prev]);
+    setUndoStack((prev) => prev.slice(0, -1));
+    setDraft(previous);
+  };
+
+  const handleRedo = () => {
+    if (redoStack.length === 0) return;
+    const next = redoStack[0];
+    setUndoStack((prev) => [...prev, draft]);
+    setRedoStack((prev) => prev.slice(1));
+    setDraft(next);
+  };
+
   const updateClauseContent = (sectionId: string, content: string) => {
     setDraft((prev) =>
       prev.map((section) => (section.id === sectionId ? { ...section, content } : section))
@@ -258,8 +292,28 @@ const TemplateBuilder: React.FC = () => {
     });
   };
 
-  const handleToolbarAction = (action: 'bold' | 'italic' | 'bullet' | 'numbered') => {
+  const insertHeading = (level: 2 | 3) => {
+    withActiveTextArea(({ value, selectionStart, selectionEnd }) => {
+      const before = value.slice(0, selectionStart);
+      const selected = value.slice(selectionStart, selectionEnd) || 'Heading';
+      const after = value.slice(selectionEnd);
+      const prefix = level === 2 ? '## ' : '### ';
+      const newText = `${before}${prefix}${selected}${after}`;
+      const start = before.length;
+      const end = start + prefix.length + selected.length;
+      return {
+        text: newText,
+        selectionStart: start,
+        selectionEnd: end,
+      };
+    });
+  };
+
+  const handleToolbarAction = (
+    action: 'bold' | 'italic' | 'underline' | 'bullet' | 'numbered' | 'h2' | 'h3'
+  ) => {
     if (!canEdit || draft.length === 0) return;
+    saveToUndoStack();
     switch (action) {
       case 'bold':
         wrapSelection('**');
@@ -267,11 +321,20 @@ const TemplateBuilder: React.FC = () => {
       case 'italic':
         wrapSelection('*');
         break;
+      case 'underline':
+        wrapSelection('__');
+        break;
       case 'bullet':
         insertBullets('bulleted');
         break;
       case 'numbered':
         insertBullets('numbered');
+        break;
+      case 'h2':
+        insertHeading(2);
+        break;
+      case 'h3':
+        insertHeading(3);
         break;
       default:
         break;
@@ -279,7 +342,21 @@ const TemplateBuilder: React.FC = () => {
   };
 
   const handleRemove = (sectionId: string) => {
+    saveToUndoStack();
     setDraft((prev) => prev.filter((s) => s.id !== sectionId));
+  };
+
+  const renderMarkdown = (text: string) => {
+    return text
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/__(.+?)__/g, '<u>$1</u>')
+      .replace(/^## (.+)$/gm, '<h2 class="text-xl font-bold mt-6 mb-3 text-slate-900 dark:text-white">$1</h2>')
+      .replace(/^### (.+)$/gm, '<h3 class="text-lg font-semibold mt-4 mb-2 text-slate-800 dark:text-slate-100">$1</h3>')
+      .replace(/^• (.+)$/gm, '<li class="ml-6">$1</li>')
+      .replace(/^\d+\. (.+)$/gm, '<li class="ml-6">$1</li>')
+      .replace(/\n\n/g, '</p><p class="mb-3">')
+      .replace(/^(?!<[h|l])/gm, '<p class="mb-3">');
   };
 
   const handleSave = async () => {
@@ -475,35 +552,108 @@ const TemplateBuilder: React.FC = () => {
                 <div className="flex flex-wrap gap-2 items-center">
                   <button
                     type="button"
+                    onClick={handleUndo}
+                    disabled={!canEdit || undoStack.length === 0}
+                    title="Undo"
+                    className="p-2 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 hover:bg-slate-50 disabled:opacity-40"
+                  >
+                    <Undo size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRedo}
+                    disabled={!canEdit || redoStack.length === 0}
+                    title="Redo"
+                    className="p-2 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 hover:bg-slate-50 disabled:opacity-40"
+                  >
+                    <Redo size={16} />
+                  </button>
+                  <div className="w-px h-6 bg-slate-300 dark:bg-white/10 mx-1"></div>
+                  <button
+                    type="button"
                     onClick={() => handleToolbarAction('bold')}
                     disabled={!canEdit}
-                    className="px-3 py-1.5 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 text-sm font-semibold disabled:opacity-40"
+                    title="Bold"
+                    className="p-2 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 hover:bg-slate-50 disabled:opacity-40"
                   >
-                    B
+                    <Bold size={16} />
                   </button>
                   <button
                     type="button"
                     onClick={() => handleToolbarAction('italic')}
                     disabled={!canEdit}
-                    className="px-3 py-1.5 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 text-sm italic disabled:opacity-40"
+                    title="Italic"
+                    className="p-2 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 hover:bg-slate-50 disabled:opacity-40"
                   >
-                    I
+                    <Italic size={16} />
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => handleToolbarAction('underline')}
+                    disabled={!canEdit}
+                    title="Underline"
+                    className="p-2 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 hover:bg-slate-50 disabled:opacity-40"
+                  >
+                    <Underline size={16} />
+                  </button>
+                  <div className="w-px h-6 bg-slate-300 dark:bg-white/10 mx-1"></div>
+                  <button
+                    type="button"
+                    onClick={() => handleToolbarAction('h2')}
+                    disabled={!canEdit}
+                    title="Heading 2"
+                    className="px-3 py-1.5 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 text-sm font-bold hover:bg-slate-50 disabled:opacity-40"
+                  >
+                    H2
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleToolbarAction('h3')}
+                    disabled={!canEdit}
+                    title="Heading 3"
+                    className="px-3 py-1.5 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 text-sm font-semibold hover:bg-slate-50 disabled:opacity-40"
+                  >
+                    H3
+                  </button>
+                  <div className="w-px h-6 bg-slate-300 dark:bg-white/10 mx-1"></div>
                   <button
                     type="button"
                     onClick={() => handleToolbarAction('bullet')}
                     disabled={!canEdit}
-                    className="px-3 py-1.5 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 text-sm disabled:opacity-40"
+                    title="Bullet List"
+                    className="p-2 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 hover:bg-slate-50 disabled:opacity-40"
                   >
-                    • List
+                    <List size={16} />
                   </button>
                   <button
                     type="button"
                     onClick={() => handleToolbarAction('numbered')}
                     disabled={!canEdit}
-                    className="px-3 py-1.5 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 text-sm disabled:opacity-40"
+                    title="Numbered List"
+                    className="p-2 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 hover:bg-slate-50 disabled:opacity-40"
                   >
-                    1. List
+                    <ListOrdered size={16} />
+                  </button>
+                  <div className="w-px h-6 bg-slate-300 dark:bg-white/10 mx-1"></div>
+                  <button
+                    type="button"
+                    onClick={() => setPreviewMode(!previewMode)}
+                    title={previewMode ? 'Edit Mode' : 'Preview Mode'}
+                    className={`p-2 rounded-lg border border-slate-200 dark:border-white/10 hover:bg-slate-50 flex items-center gap-2 ${
+                      previewMode ? 'bg-brand text-white' : 'bg-white dark:bg-[#0f172a]'
+                    }`}
+                  >
+                    {previewMode ? (
+                      <>
+                        <Edit3 size={16} />
+                        <span className="text-xs font-medium">Edit</span>
+                      </>
+                    ) : (
+                      <>
+                        <Eye size={16} />
+                        <span className="text-xs font-medium">Preview</span>
+                      </>
+                    )}
                   </button>
                 </div>
                 {canEdit && (
@@ -573,94 +723,130 @@ const TemplateBuilder: React.FC = () => {
                 </div>
 
                 <div className="max-w-3xl mx-auto">
-                  {draft.map((block, index) => (
-                    <div
-                      key={block.id}
-                      className="border border-slate-200 dark:border-white/10 rounded-2xl bg-white dark:bg-[#050c1f] shadow-sm mt-6 first:mt-0"
-                    >
-                      <div className="px-6 py-5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
-                        <input
-                          type="text"
-                          value={block.title}
-                          onChange={(e) =>
-                            setDraft((prev) =>
-                              prev.map((s) =>
-                                s.id === block.id ? { ...s, title: e.target.value } : s
-                              )
-                            )
-                          }
-                          placeholder="Clause heading"
-                          disabled={!canEdit}
-                          className="text-lg font-bold bg-transparent border-none focus:ring-0 w-full text-slate-900 dark:text-white"
-                        />
-                        {canEdit && (
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => moveBlock(index, 'up')}
-                              className="p-2 text-slate-400 hover:text-brand"
-                              title="Move up"
-                            >
-                              <ChevronUp size={16} />
-                            </button>
-                            <button
-                              onClick={() => moveBlock(index, 'down')}
-                              className="p-2 text-slate-400 hover:text-brand"
-                              title="Move down"
-                            >
-                              <ChevronDown size={16} />
-                            </button>
-                            <button
-                              onClick={() => handleDuplicate(block)}
-                              className="p-2 text-slate-400 hover:text-blue-500"
-                              title="Duplicate"
-                            >
-                              <Copy size={16} />
-                            </button>
-                            <button
-                              onClick={() => handleRemove(block.id)}
-                              className="p-2 text-slate-400 hover:text-red-500"
-                              title="Remove"
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
+                  {previewMode ? (
+                    <div className="bg-white dark:bg-[#0a1628] border border-slate-200 dark:border-white/10 rounded-2xl shadow-lg p-10 space-y-8">
+                      <div className="border-b border-slate-200 dark:border-white/10 pb-6">
+                        <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-3">
+                          {templateMeta.name || 'Untitled Template'}
+                        </h1>
+                        {templateMeta.description && (
+                          <p className="text-base text-slate-600 dark:text-slate-400 leading-[1.6]">
+                            {templateMeta.description}
+                          </p>
                         )}
                       </div>
-                      <div className="px-6 py-5 space-y-4">
-                        <textarea
-                          ref={(el) => {
-                            textAreaRefs.current[block.id] = el;
-                          }}
-                          value={block.content}
-                          onChange={(e) => updateClauseContent(block.id, e.target.value)}
-                          onFocus={() => setActiveClauseId(block.id)}
-                          placeholder="Write legal language here..."
-                          disabled={!canEdit}
-                          className="w-full min-h-[160px] bg-transparent border-none focus:ring-0 text-base leading-[1.7] whitespace-pre-wrap text-slate-700 dark:text-slate-300 placeholder:text-slate-400"
-                          style={{
-                            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
-                          }}
-                        />
-                        {canEdit && (
-                          <label className="inline-flex items-center gap-2 text-xs text-slate-500">
-                            <input
-                              type="checkbox"
-                              checked={block.required}
-                              onChange={(e) =>
-                                setDraft((prev) =>
-                                  prev.map((s) =>
-                                    s.id === block.id ? { ...s, required: e.target.checked } : s
-                                  )
-                                )
-                              }
-                            />
-                            Required clause
-                          </label>
-                        )}
-                      </div>
+                      {draft.map((block, index) => (
+                        <div key={block.id} className="space-y-3">
+                          <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+                            {index + 1}. {block.title}
+                            {block.required && (
+                              <span className="ml-2 text-xs bg-brand/10 text-brand px-2 py-1 rounded font-normal">
+                                Required
+                              </span>
+                            )}
+                          </h2>
+                          <div
+                            className="text-base leading-[1.7] text-slate-700 dark:text-slate-300 prose prose-slate dark:prose-invert max-w-none"
+                            dangerouslySetInnerHTML={{ __html: renderMarkdown(block.content) }}
+                          />
+                        </div>
+                      ))}
+                      {draft.length === 0 && (
+                        <p className="text-center text-slate-500 py-12">
+                          No clauses to preview. Switch to edit mode to add content.
+                        </p>
+                      )}
                     </div>
-                  ))}
-                  {draft.length === 0 && (
+                  ) : (
+                    draft.map((block, index) => (
+                      <div
+                        key={block.id}
+                        className="border border-slate-200 dark:border-white/10 rounded-2xl bg-white dark:bg-[#050c1f] shadow-sm mt-6 first:mt-0"
+                      >
+                        <div className="px-6 py-5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+                          <input
+                            type="text"
+                            value={block.title}
+                            onChange={(e) =>
+                              setDraft((prev) =>
+                                prev.map((s) =>
+                                  s.id === block.id ? { ...s, title: e.target.value } : s
+                                )
+                              )
+                            }
+                            placeholder="Clause heading"
+                            disabled={!canEdit}
+                            className="text-lg font-bold bg-transparent border-none focus:ring-0 w-full text-slate-900 dark:text-white"
+                          />
+                          {canEdit && !previewMode && (
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => moveBlock(index, 'up')}
+                                className="p-2 text-slate-400 hover:text-brand"
+                                title="Move up"
+                              >
+                                <ChevronUp size={16} />
+                              </button>
+                              <button
+                                onClick={() => moveBlock(index, 'down')}
+                                className="p-2 text-slate-400 hover:text-brand"
+                                title="Move down"
+                              >
+                                <ChevronDown size={16} />
+                              </button>
+                              <button
+                                onClick={() => handleDuplicate(block)}
+                                className="p-2 text-slate-400 hover:text-blue-500"
+                                title="Duplicate"
+                              >
+                                <Copy size={16} />
+                              </button>
+                              <button
+                                onClick={() => handleRemove(block.id)}
+                                className="p-2 text-slate-400 hover:text-red-500"
+                                title="Remove"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                        <div className="px-6 py-5 space-y-4">
+                          <textarea
+                            ref={(el) => {
+                              textAreaRefs.current[block.id] = el;
+                            }}
+                            value={block.content}
+                            onChange={(e) => updateClauseContent(block.id, e.target.value)}
+                            onFocus={() => setActiveClauseId(block.id)}
+                            placeholder="Write legal language here..."
+                            disabled={!canEdit}
+                            className="w-full min-h-[160px] bg-transparent border-none focus:ring-0 text-base leading-[1.7] whitespace-pre-wrap text-slate-700 dark:text-slate-300 placeholder:text-slate-400"
+                            style={{
+                              fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+                            }}
+                          />
+                          {canEdit && !previewMode && (
+                            <label className="inline-flex items-center gap-2 text-xs text-slate-500">
+                              <input
+                                type="checkbox"
+                                checked={block.required}
+                                onChange={(e) =>
+                                  setDraft((prev) =>
+                                    prev.map((s) =>
+                                      s.id === block.id ? { ...s, required: e.target.checked } : s
+                                    )
+                                  )
+                                }
+                              />
+                              Required clause
+                            </label>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                  {!previewMode && draft.length === 0 && (
                     <div className="text-center text-sm text-slate-500 py-12 border border-dashed border-slate-300 dark:border-white/10 rounded-2xl mt-6">
                       No clauses yet. Use the clause library or toolbar to start building.
                     </div>
