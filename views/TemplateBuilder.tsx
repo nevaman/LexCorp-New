@@ -328,6 +328,15 @@ const TemplateBuilder: React.FC = () => {
 
   return (
     <div className="p-10 h-full overflow-y-auto text-slate-900 dark:text-slate-200 space-y-6">
+      <style>{`
+        .clause-textarea {
+          font-size: 16px;
+          line-height: 1.7;
+        }
+        .clause-textarea::placeholder {
+          opacity: 0.5;
+        }
+      `}</style>
       <div className="mb-8 flex items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white font-['Outfit']">
@@ -524,15 +533,15 @@ const TemplateBuilder: React.FC = () => {
                 )}
               </div>
 
-              <div className="px-8 py-6 space-y-6 overflow-y-auto flex-1 bg-white dark:bg-[#020617]">
-                <div className="max-w-3xl mx-auto space-y-4">
+              <div className="px-8 py-8 space-y-8 overflow-y-auto flex-1 bg-white dark:bg-[#020617]">
+                <div className="max-w-3xl mx-auto space-y-3">
                   <input
                     type="text"
                     value={templateMeta.name}
                     onChange={(e) => setTemplateMeta({ ...templateMeta, name: e.target.value })}
                     placeholder="Template title"
                     disabled={!canEdit}
-                    className="text-3xl font-semibold w-full bg-transparent border-none focus:ring-0"
+                    className="text-3xl font-bold w-full bg-transparent border-none focus:ring-0 text-slate-900 dark:text-white placeholder:text-slate-400"
                   />
                   <textarea
                     value={templateMeta.description}
@@ -540,7 +549,7 @@ const TemplateBuilder: React.FC = () => {
                     placeholder="Add a summary for this template..."
                     disabled={!canEdit}
                     rows={2}
-                    className="w-full text-sm text-slate-500 bg-transparent border-none focus:ring-0"
+                    className="w-full text-sm text-slate-500 dark:text-slate-400 bg-transparent border-none focus:ring-0 leading-[1.6] placeholder:text-slate-400"
                   />
                   {isOrgAdmin && (
                     <div className="flex items-center gap-2 text-xs text-slate-500">
@@ -563,13 +572,13 @@ const TemplateBuilder: React.FC = () => {
                   )}
                 </div>
 
-                <div className="max-w-3xl mx-auto space-y-6">
+                <div className="max-w-3xl mx-auto">
                   {draft.map((block, index) => (
                     <div
                       key={block.id}
-                      className="border border-slate-200 dark:border-white/10 rounded-2xl bg-white dark:bg-[#050c1f] shadow-sm"
+                      className="border border-slate-200 dark:border-white/10 rounded-2xl bg-white dark:bg-[#050c1f] shadow-sm mt-6 first:mt-0"
                     >
-                      <div className="px-5 py-4 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+                      <div className="px-6 py-5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
                         <input
                           type="text"
                           value={block.title}
@@ -582,7 +591,7 @@ const TemplateBuilder: React.FC = () => {
                           }
                           placeholder="Clause heading"
                           disabled={!canEdit}
-                          className="text-base font-semibold bg-transparent border-none focus:ring-0 w-full"
+                          className="text-lg font-bold bg-transparent border-none focus:ring-0 w-full text-slate-900 dark:text-white"
                         />
                         {canEdit && (
                           <div className="flex items-center gap-1">
@@ -617,7 +626,7 @@ const TemplateBuilder: React.FC = () => {
                           </div>
                         )}
                       </div>
-                      <div className="px-5 py-4 space-y-3">
+                      <div className="px-6 py-5 space-y-4">
                         <textarea
                           ref={(el) => {
                             textAreaRefs.current[block.id] = el;
@@ -627,7 +636,10 @@ const TemplateBuilder: React.FC = () => {
                           onFocus={() => setActiveClauseId(block.id)}
                           placeholder="Write legal language here..."
                           disabled={!canEdit}
-                          className="w-full min-h-[140px] bg-transparent border-none focus:ring-0 text-sm leading-relaxed whitespace-pre-wrap"
+                          className="w-full min-h-[160px] bg-transparent border-none focus:ring-0 text-base leading-[1.7] whitespace-pre-wrap text-slate-700 dark:text-slate-300 placeholder:text-slate-400"
+                          style={{
+                            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+                          }}
                         />
                         {canEdit && (
                           <label className="inline-flex items-center gap-2 text-xs text-slate-500">
@@ -649,7 +661,7 @@ const TemplateBuilder: React.FC = () => {
                     </div>
                   ))}
                   {draft.length === 0 && (
-                    <div className="text-center text-sm text-slate-500 py-10 border border-dashed border-slate-300 rounded-2xl">
+                    <div className="text-center text-sm text-slate-500 py-12 border border-dashed border-slate-300 dark:border-white/10 rounded-2xl mt-6">
                       No clauses yet. Use the clause library or toolbar to start building.
                     </div>
                   )}
