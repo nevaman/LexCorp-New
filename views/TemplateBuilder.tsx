@@ -545,7 +545,48 @@ const TemplateBuilder: React.FC = () => {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/5 rounded-xl shadow-sm dark:shadow-2xl relative overflow-hidden">
+          <div className="space-y-4">
+            {activeTemplateId && (
+              <div className="space-y-3">
+                <input
+                  type="text"
+                  value={templateMeta.name}
+                  onChange={(e) => setTemplateMeta({ ...templateMeta, name: e.target.value })}
+                  placeholder="Template title"
+                  disabled={!canEdit}
+                  className="text-2xl font-bold w-full bg-transparent border-b-2 border-slate-200 dark:border-white/10 focus:border-brand focus:outline-none pb-2 text-slate-900 dark:text-white placeholder:text-slate-400"
+                />
+                <textarea
+                  value={templateMeta.description}
+                  onChange={(e) => setTemplateMeta({ ...templateMeta, description: e.target.value })}
+                  placeholder="Add a summary for this template..."
+                  disabled={!canEdit}
+                  rows={2}
+                  className="w-full text-sm text-slate-600 dark:text-slate-400 bg-transparent border border-slate-200 dark:border-white/10 rounded-lg px-4 py-3 focus:border-brand focus:outline-none leading-[1.6] placeholder:text-slate-400"
+                />
+                {isOrgAdmin && (
+                  <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                    <span className="font-medium">Visibility:</span>
+                    <select
+                      value={templateMeta.visibility}
+                      disabled={!canEdit || isBranchAdmin}
+                      onChange={(e) =>
+                        setTemplateMeta({
+                          ...templateMeta,
+                          visibility: e.target.value as 'organization' | 'branch',
+                        })
+                      }
+                      className="border border-slate-200 dark:border-white/10 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-[#0f172a] text-slate-700 dark:text-slate-300 focus:border-brand focus:outline-none"
+                    >
+                      <option value="organization">Organization-wide</option>
+                      <option value="branch">Branch-specific</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/5 rounded-xl shadow-sm dark:shadow-2xl relative overflow-hidden">
             <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
             <div className="relative z-10 flex flex-col h-full">
               <div className="border-b border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-[#071029] px-6 py-4 flex flex-wrap gap-3 items-center justify-between">
@@ -854,6 +895,7 @@ const TemplateBuilder: React.FC = () => {
                 </div>
               </div>
             </div>
+          </div>
           </div>
         </div>
       )}
