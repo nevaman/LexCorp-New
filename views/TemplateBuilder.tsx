@@ -586,17 +586,17 @@ const TemplateBuilder: React.FC = () => {
               </div>
             )}
 
-            <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/5 rounded-xl shadow-sm dark:shadow-2xl relative overflow-hidden">
+            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl shadow-sm dark:shadow-2xl relative overflow-hidden">
             <div className="absolute inset-0 opacity-5" style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
             <div className="relative z-10 flex flex-col h-full">
-              <div className="border-b border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-[#071029] px-6 py-4 flex flex-wrap gap-3 items-center justify-between">
+              <div className="border-b border-slate-200 dark:border-slate-600 bg-slate-100 dark:bg-slate-700 px-6 py-4 flex flex-wrap gap-3 items-center justify-between">
                 <div className="flex flex-wrap gap-2 items-center">
                   <button
                     type="button"
                     onClick={handleUndo}
                     disabled={!canEdit || undoStack.length === 0}
                     title="Undo"
-                    className="p-2 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 hover:bg-slate-50 disabled:opacity-40"
+                    className="p-2 rounded-lg bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-500 disabled:opacity-40"
                   >
                     <Undo size={16} />
                   </button>
@@ -605,17 +605,17 @@ const TemplateBuilder: React.FC = () => {
                     onClick={handleRedo}
                     disabled={!canEdit || redoStack.length === 0}
                     title="Redo"
-                    className="p-2 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 hover:bg-slate-50 disabled:opacity-40"
+                    className="p-2 rounded-lg bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-500 disabled:opacity-40"
                   >
                     <Redo size={16} />
                   </button>
-                  <div className="w-px h-6 bg-slate-300 dark:bg-white/10 mx-1"></div>
+                  <div className="w-px h-6 bg-slate-300 dark:bg-slate-500 mx-1"></div>
                   <button
                     type="button"
                     onClick={() => handleToolbarAction('bold')}
                     disabled={!canEdit}
                     title="Bold"
-                    className="p-2 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 hover:bg-slate-50 disabled:opacity-40"
+                    className="p-2 rounded-lg bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-500 disabled:opacity-40"
                   >
                     <Bold size={16} />
                   </button>
@@ -624,7 +624,7 @@ const TemplateBuilder: React.FC = () => {
                     onClick={() => handleToolbarAction('italic')}
                     disabled={!canEdit}
                     title="Italic"
-                    className="p-2 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 hover:bg-slate-50 disabled:opacity-40"
+                    className="p-2 rounded-lg bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-500 disabled:opacity-40"
                   >
                     <Italic size={16} />
                   </button>
@@ -633,17 +633,17 @@ const TemplateBuilder: React.FC = () => {
                     onClick={() => handleToolbarAction('underline')}
                     disabled={!canEdit}
                     title="Underline"
-                    className="p-2 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 hover:bg-slate-50 disabled:opacity-40"
+                    className="p-2 rounded-lg bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-500 disabled:opacity-40"
                   >
                     <Underline size={16} />
                   </button>
-                  <div className="w-px h-6 bg-slate-300 dark:bg-white/10 mx-1"></div>
+                  <div className="w-px h-6 bg-slate-300 dark:bg-slate-500 mx-1"></div>
                   <button
                     type="button"
                     onClick={() => handleToolbarAction('h2')}
                     disabled={!canEdit}
                     title="Heading 2"
-                    className="px-3 py-1.5 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 text-sm font-bold hover:bg-slate-50 disabled:opacity-40"
+                    className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 text-sm font-bold hover:bg-slate-50 dark:hover:bg-slate-500 disabled:opacity-40"
                   >
                     H2
                   </button>
@@ -652,17 +652,17 @@ const TemplateBuilder: React.FC = () => {
                     onClick={() => handleToolbarAction('h3')}
                     disabled={!canEdit}
                     title="Heading 3"
-                    className="px-3 py-1.5 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 text-sm font-semibold hover:bg-slate-50 disabled:opacity-40"
+                    className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-500 disabled:opacity-40"
                   >
                     H3
                   </button>
-                  <div className="w-px h-6 bg-slate-300 dark:bg-white/10 mx-1"></div>
+                  <div className="w-px h-6 bg-slate-300 dark:bg-slate-500 mx-1"></div>
                   <button
                     type="button"
                     onClick={() => handleToolbarAction('bullet')}
                     disabled={!canEdit}
                     title="Bullet List"
-                    className="p-2 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 hover:bg-slate-50 disabled:opacity-40"
+                    className="p-2 rounded-lg bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-500 disabled:opacity-40"
                   >
                     <List size={16} />
                   </button>
@@ -671,17 +671,17 @@ const TemplateBuilder: React.FC = () => {
                     onClick={() => handleToolbarAction('numbered')}
                     disabled={!canEdit}
                     title="Numbered List"
-                    className="p-2 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 hover:bg-slate-50 disabled:opacity-40"
+                    className="p-2 rounded-lg bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-500 disabled:opacity-40"
                   >
                     <ListOrdered size={16} />
                   </button>
-                  <div className="w-px h-6 bg-slate-300 dark:bg-white/10 mx-1"></div>
+                  <div className="w-px h-6 bg-slate-300 dark:bg-slate-500 mx-1"></div>
                   <button
                     type="button"
                     onClick={() => setPreviewMode(!previewMode)}
                     title={previewMode ? 'Edit Mode' : 'Preview Mode'}
-                    className={`p-2 rounded-lg border border-slate-200 dark:border-white/10 hover:bg-slate-50 flex items-center gap-2 ${
-                      previewMode ? 'bg-brand text-white' : 'bg-white dark:bg-[#0f172a]'
+                    className={`p-2 rounded-lg border border-slate-200 dark:border-slate-500 hover:bg-slate-50 dark:hover:bg-slate-500 flex items-center gap-2 ${
+                      previewMode ? 'bg-brand text-white' : 'bg-white dark:bg-slate-600'
                     }`}
                   >
                     {previewMode ? (
