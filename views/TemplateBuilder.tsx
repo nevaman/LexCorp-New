@@ -725,44 +725,6 @@ const TemplateBuilder: React.FC = () => {
               </div>
 
               <div className="px-8 py-8 space-y-8 overflow-y-auto flex-1 bg-white dark:bg-[#020617]">
-                <div className="max-w-3xl mx-auto space-y-3">
-                  <input
-                    type="text"
-                    value={templateMeta.name}
-                    onChange={(e) => setTemplateMeta({ ...templateMeta, name: e.target.value })}
-                    placeholder="Template title"
-                    disabled={!canEdit}
-                    className="text-3xl font-bold w-full bg-transparent border-none focus:ring-0 text-slate-900 dark:text-white placeholder:text-slate-400"
-                  />
-                  <textarea
-                    value={templateMeta.description}
-                    onChange={(e) => setTemplateMeta({ ...templateMeta, description: e.target.value })}
-                    placeholder="Add a summary for this template..."
-                    disabled={!canEdit}
-                    rows={2}
-                    className="w-full text-sm text-slate-500 dark:text-slate-400 bg-transparent border-none focus:ring-0 leading-[1.6] placeholder:text-slate-400"
-                  />
-                  {isOrgAdmin && (
-                    <div className="flex items-center gap-2 text-xs text-slate-500">
-                      Visibility:
-                      <select
-                        value={templateMeta.visibility}
-                        disabled={!canEdit || isBranchAdmin}
-                        onChange={(e) =>
-                          setTemplateMeta({
-                            ...templateMeta,
-                            visibility: e.target.value as 'organization' | 'branch',
-                          })
-                        }
-                        className="border border-slate-200 rounded-lg px-2 py-1 text-xs bg-white dark:bg-[#0f172a]"
-                      >
-                        <option value="organization">Organization</option>
-                        <option value="branch">Branch</option>
-                      </select>
-                    </div>
-                  )}
-                </div>
-
                 <div className="max-w-3xl mx-auto">
                   {previewMode ? (
                     <div className="bg-white dark:bg-[#0a1628] border border-slate-200 dark:border-white/10 rounded-2xl shadow-lg p-10 space-y-8">
