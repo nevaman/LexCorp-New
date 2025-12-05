@@ -478,7 +478,7 @@ const TemplateBuilder: React.FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-[320px_minmax(0,1fr)] gap-6">
-          <div className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/5 rounded-xl shadow-sm dark:shadow-lg p-6 h-fit space-y-4">
+          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-xl shadow-sm dark:shadow-lg p-6 h-fit space-y-4">
             <div>
               <h2 className="font-bold text-slate-900 dark:text-white mb-2">Template Library</h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -498,7 +498,7 @@ const TemplateBuilder: React.FC = () => {
                   className={`w-full p-4 rounded-lg border text-left transition-all flex justify-between items-center ${
                     tmpl.id === activeTemplateId
                       ? 'border-brand/50 bg-brand/10'
-                      : 'border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-white/[0.02] hover:bg-slate-100 dark:hover:bg-white/5 hover:border-slate-300 dark:hover:border-white/10'
+                      : 'border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700 hover:bg-slate-100 dark:hover:bg-slate-600 hover:border-slate-300 dark:hover:border-slate-500'
                   }`}
                 >
                   <div>
@@ -523,7 +523,7 @@ const TemplateBuilder: React.FC = () => {
                 </button>
               ))}
             </div>
-            <div className="pt-4 border-t border-slate-100 dark:border-white/5 space-y-3">
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-600 space-y-3">
               <p className="text-xs font-bold text-slate-500 uppercase tracking-[0.4em]">
                 Common Clauses
               </p>
@@ -532,7 +532,7 @@ const TemplateBuilder: React.FC = () => {
                   <button
                     key={section.id}
                     onClick={() => handleAddCommonSection(section)}
-                    className="flex items-center justify-between p-3 rounded-xl border border-slate-200 dark:border-white/5 hover:border-brand/40 hover:bg-brand/5 text-left text-slate-600 dark:text-slate-300"
+                    className="flex items-center justify-between p-3 rounded-xl border border-slate-200 dark:border-slate-600 hover:border-brand/40 hover:bg-brand/5 dark:hover:bg-brand/10 text-left text-slate-600 dark:text-slate-300"
                     disabled={!canEdit}
                   >
                     <span>{section.title}</span>
@@ -554,7 +554,7 @@ const TemplateBuilder: React.FC = () => {
                   onChange={(e) => setTemplateMeta({ ...templateMeta, name: e.target.value })}
                   placeholder="Template title"
                   disabled={!canEdit}
-                  className="text-2xl font-bold w-full bg-transparent border-b-2 border-slate-200 dark:border-white/10 focus:border-brand focus:outline-none pb-2 text-slate-900 dark:text-white placeholder:text-slate-400"
+                  className="text-2xl font-bold w-full bg-transparent border-b-2 border-slate-200 dark:border-slate-500 focus:border-brand focus:outline-none pb-2 text-slate-900 dark:text-white placeholder:text-slate-400"
                 />
                 <textarea
                   value={templateMeta.description}
@@ -562,7 +562,7 @@ const TemplateBuilder: React.FC = () => {
                   placeholder="Add a summary for this template..."
                   disabled={!canEdit}
                   rows={2}
-                  className="w-full text-sm text-slate-600 dark:text-slate-400 bg-transparent border border-slate-200 dark:border-white/10 rounded-lg px-4 py-3 focus:border-brand focus:outline-none leading-[1.6] placeholder:text-slate-400"
+                  className="w-full text-sm text-slate-600 dark:text-slate-200 bg-transparent border border-slate-200 dark:border-slate-500 rounded-lg px-4 py-3 focus:border-brand focus:outline-none leading-[1.6] placeholder:text-slate-400"
                 />
                 {isOrgAdmin && (
                   <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
@@ -576,7 +576,7 @@ const TemplateBuilder: React.FC = () => {
                           visibility: e.target.value as 'organization' | 'branch',
                         })
                       }
-                      className="border border-slate-200 dark:border-white/10 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-[#0f172a] text-slate-700 dark:text-slate-300 focus:border-brand focus:outline-none"
+                      className="border border-slate-200 dark:border-slate-500 rounded-lg px-3 py-1.5 text-sm bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-100 focus:border-brand focus:outline-none"
                     >
                       <option value="organization">Organization-wide</option>
                       <option value="branch">Branch-specific</option>
@@ -701,7 +701,7 @@ const TemplateBuilder: React.FC = () => {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={handleAddSection}
-                      className="px-3 py-1.5 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 text-sm font-semibold flex items-center gap-1"
+                      className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-600 border border-slate-200 dark:border-slate-500 text-sm font-semibold flex items-center gap-1 hover:bg-slate-50 dark:hover:bg-slate-500"
                     >
                       <Plus size={14} /> Clause
                     </button>
@@ -724,11 +724,11 @@ const TemplateBuilder: React.FC = () => {
                 )}
               </div>
 
-              <div className="px-8 py-8 space-y-8 overflow-y-auto flex-1 bg-white dark:bg-[#020617]">
+              <div className="px-8 py-8 space-y-8 overflow-y-auto flex-1 bg-white dark:bg-slate-700">
                 <div className="max-w-3xl mx-auto">
                   {previewMode ? (
-                    <div className="bg-white dark:bg-[#0a1628] border border-slate-200 dark:border-white/10 rounded-2xl shadow-lg p-10 space-y-8">
-                      <div className="border-b border-slate-200 dark:border-white/10 pb-6">
+                    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-2xl shadow-lg p-10 space-y-8">
+                      <div className="border-b border-slate-200 dark:border-slate-600 pb-6">
                         <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-3">
                           {templateMeta.name || 'Untitled Template'}
                         </h1>
@@ -850,7 +850,7 @@ const TemplateBuilder: React.FC = () => {
                     ))
                   )}
                   {!previewMode && draft.length === 0 && (
-                    <div className="text-center text-sm text-slate-500 py-12 border border-dashed border-slate-300 dark:border-white/10 rounded-2xl mt-6">
+                    <div className="text-center text-sm text-slate-500 dark:text-slate-300 py-12 border border-dashed border-slate-300 dark:border-slate-500 rounded-2xl mt-6">
                       No clauses yet. Use the clause library or toolbar to start building.
                     </div>
                   )}
