@@ -923,7 +923,7 @@ const AgreementGenerator: React.FC<GeneratorProps> = ({
       </div>
 
             {/* Center: Editor (Paginated A4 Representation) */}
-            <div className="flex-1 overflow-y-auto p-8 relative bg-slate-200 dark:bg-slate-700 flex flex-col items-center">
+            <div className="flex-1 overflow-y-auto p-8 relative bg-white dark:bg-slate-700 flex flex-col items-center">
               <div className="absolute inset-0 opacity-5 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
               <div className="space-y-12">
                 {paginatedSections.map((pageClauses, pageIndex) => {
