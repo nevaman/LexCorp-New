@@ -58,12 +58,6 @@ import {
   Bold,
   Italic,
   Underline,
-  Table,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  Indent,
-  Outdent,
 } from 'lucide-react';
 
 export {
@@ -126,11 +120,5 @@ export {
   Bold,
   Italic,
   Underline,
-  Table,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  Indent,
-  Outdent,
 };
 

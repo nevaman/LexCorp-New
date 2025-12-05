@@ -11,11 +11,16 @@ import {
   Edit3,
   Undo,
   Redo,
+  Type,
+  List,
+  ListOrdered,
+  Bold,
+  Italic,
+  Underline,
 } from '../components/ui/Icons';
 import { useAuth } from '../contexts/AuthContext';
 import { Template } from '../types';
 import { fetchTemplates, saveTemplate } from '../services/templateService';
-import { RichTextEditor } from '../components/RichTextEditor';
 
 type DraftSection = {
   id: string;
@@ -79,6 +84,7 @@ const TemplateBuilder: React.FC = () => {
   const [previewMode, setPreviewMode] = useState(false);
   const [undoStack, setUndoStack] = useState<DraftSection[][]>([]);
   const [redoStack, setRedoStack] = useState<DraftSection[][]>([]);
+  const textAreaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
 
   const isOrgAdmin = memberRole === 'org_admin';
   const isBranchAdmin = memberRole === 'branch_admin';
@@ -204,15 +210,153 @@ const TemplateBuilder: React.FC = () => {
   };
 
   const updateClauseContent = (sectionId: string, content: string) => {
-    saveToUndoStack();
     setDraft((prev) =>
       prev.map((section) => (section.id === sectionId ? { ...section, content } : section))
     );
   };
 
+  const withActiveTextArea = (
+    callback: (params: {
+      textarea: HTMLTextAreaElement;
+      value: string;
+      selectionStart: number;
+      selectionEnd: number;
+      clauseId: string;
+    }) =>
+      | {
+          text: string;
+          selectionStart: number;
+          selectionEnd: number;
+        }
+      | void
+  ) => {
+    const targetId = activeClauseId ?? draft[0]?.id;
+    if (!targetId) return;
+    const textarea = textAreaRefs.current[targetId];
+    if (!textarea) return;
+
+    const { selectionStart, selectionEnd, value } = textarea;
+    const result = callback({
+      textarea,
+      value,
+      selectionStart,
+      selectionEnd,
+      clauseId: targetId,
+    });
+    if (!result) return;
+
+    updateClauseContent(targetId, result.text);
+    requestAnimationFrame(() => {
+      textarea.focus();
+      textarea.setSelectionRange(result.selectionStart, result.selectionEnd);
+    });
+  };
+
+  const wrapSelection = (wrapper: string) => {
+    withActiveTextArea(({ value, selectionStart, selectionEnd }) => {
+      const before = value.slice(0, selectionStart);
+      const selected = value.slice(selectionStart, selectionEnd);
+      const after = value.slice(selectionEnd);
+      const newText = `${before}${wrapper}${selected}${wrapper}${after}`;
+      const offset = wrapper.length;
+      return {
+        text: newText,
+        selectionStart: selectionStart + offset,
+        selectionEnd: selectionEnd + offset,
+      };
+    });
+  };
+
+  const insertBullets = (bulletType: 'bulleted' | 'numbered') => {
+    withActiveTextArea(({ value, selectionStart, selectionEnd }) => {
+      const before = value.slice(0, selectionStart);
+      const selected = value.slice(selectionStart, selectionEnd) || '';
+      const after = value.slice(selectionEnd);
+      const lines = selected.split('\n');
+      const formattedLines = lines.map((line, index) => {
+        const content = line.trim().length ? line : 'Clause text';
+        if (bulletType === 'bulleted') {
+          return `• ${content}`;
+        }
+        return `${index + 1}. ${content}`;
+      });
+      const insertion = formattedLines.join('\n');
+      const newText = `${before}${insertion}${after}`;
+      const start = before.length;
+      const end = start + insertion.length;
+      return {
+        text: newText,
+        selectionStart: start,
+        selectionEnd: end,
+      };
+    });
+  };
+
+  const insertHeading = (level: 2 | 3) => {
+    withActiveTextArea(({ value, selectionStart, selectionEnd }) => {
+      const before = value.slice(0, selectionStart);
+      const selected = value.slice(selectionStart, selectionEnd) || 'Heading';
+      const after = value.slice(selectionEnd);
+      const prefix = level === 2 ? '## ' : '### ';
+      const newText = `${before}${prefix}${selected}${after}`;
+      const start = before.length;
+      const end = start + prefix.length + selected.length;
+      return {
+        text: newText,
+        selectionStart: start,
+        selectionEnd: end,
+      };
+    });
+  };
+
+  const handleToolbarAction = (
+    action: 'bold' | 'italic' | 'underline' | 'bullet' | 'numbered' | 'h2' | 'h3'
+  ) => {
+    if (!canEdit || draft.length === 0) return;
+    saveToUndoStack();
+    switch (action) {
+      case 'bold':
+        wrapSelection('**');
+        break;
+      case 'italic':
+        wrapSelection('*');
+        break;
+      case 'underline':
+        wrapSelection('__');
+        break;
+      case 'bullet':
+        insertBullets('bulleted');
+        break;
+      case 'numbered':
+        insertBullets('numbered');
+        break;
+      case 'h2':
+        insertHeading(2);
+        break;
+      case 'h3':
+        insertHeading(3);
+        break;
+      default:
+        break;
+    }
+  };
+
   const handleRemove = (sectionId: string) => {
     saveToUndoStack();
     setDraft((prev) => prev.filter((s) => s.id !== sectionId));
+  };
+
+  const renderMarkdown = (text: string) => {
+    return text
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/__(.+?)__/g, '<u>$1</u>')
+      .replace(/^## (.+)$/gm, '<h2 class="text-xl font-bold mt-6 mb-3 text-slate-900 dark:text-white">$1</h2>')
+      .replace(/^### (.+)$/gm, '<h3 class="text-lg font-semibold mt-4 mb-2 text-slate-800 dark:text-slate-100">$1</h3>')
+      .replace(/^• (.+)$/gm, '<li class="ml-6">$1</li>')
+      .replace(/^\d+\. (.+)$/gm, '<li class="ml-6">$1</li>')
+      .replace(/\n\n/g, '</p><p class="mb-3">')
+      .replace(/^(?!<[h|l])/gm, '<p class="mb-3">');
   };
 
   const handleSave = async () => {
@@ -427,6 +571,72 @@ const TemplateBuilder: React.FC = () => {
                   <div className="w-px h-6 bg-slate-300 dark:bg-white/10 mx-1"></div>
                   <button
                     type="button"
+                    onClick={() => handleToolbarAction('bold')}
+                    disabled={!canEdit}
+                    title="Bold"
+                    className="p-2 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 hover:bg-slate-50 disabled:opacity-40"
+                  >
+                    <Bold size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleToolbarAction('italic')}
+                    disabled={!canEdit}
+                    title="Italic"
+                    className="p-2 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 hover:bg-slate-50 disabled:opacity-40"
+                  >
+                    <Italic size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleToolbarAction('underline')}
+                    disabled={!canEdit}
+                    title="Underline"
+                    className="p-2 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 hover:bg-slate-50 disabled:opacity-40"
+                  >
+                    <Underline size={16} />
+                  </button>
+                  <div className="w-px h-6 bg-slate-300 dark:bg-white/10 mx-1"></div>
+                  <button
+                    type="button"
+                    onClick={() => handleToolbarAction('h2')}
+                    disabled={!canEdit}
+                    title="Heading 2"
+                    className="px-3 py-1.5 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 text-sm font-bold hover:bg-slate-50 disabled:opacity-40"
+                  >
+                    H2
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleToolbarAction('h3')}
+                    disabled={!canEdit}
+                    title="Heading 3"
+                    className="px-3 py-1.5 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 text-sm font-semibold hover:bg-slate-50 disabled:opacity-40"
+                  >
+                    H3
+                  </button>
+                  <div className="w-px h-6 bg-slate-300 dark:bg-white/10 mx-1"></div>
+                  <button
+                    type="button"
+                    onClick={() => handleToolbarAction('bullet')}
+                    disabled={!canEdit}
+                    title="Bullet List"
+                    className="p-2 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 hover:bg-slate-50 disabled:opacity-40"
+                  >
+                    <List size={16} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleToolbarAction('numbered')}
+                    disabled={!canEdit}
+                    title="Numbered List"
+                    className="p-2 rounded-lg bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-white/10 hover:bg-slate-50 disabled:opacity-40"
+                  >
+                    <ListOrdered size={16} />
+                  </button>
+                  <div className="w-px h-6 bg-slate-300 dark:bg-white/10 mx-1"></div>
+                  <button
+                    type="button"
                     onClick={() => setPreviewMode(!previewMode)}
                     title={previewMode ? 'Edit Mode' : 'Preview Mode'}
                     className={`p-2 rounded-lg border border-slate-200 dark:border-white/10 hover:bg-slate-50 flex items-center gap-2 ${
@@ -537,7 +747,7 @@ const TemplateBuilder: React.FC = () => {
                           </h2>
                           <div
                             className="text-base leading-[1.7] text-slate-700 dark:text-slate-300 prose prose-slate dark:prose-invert max-w-none"
-                            dangerouslySetInnerHTML={{ __html: block.content }}
+                            dangerouslySetInnerHTML={{ __html: renderMarkdown(block.content) }}
                           />
                         </div>
                       ))}
@@ -601,17 +811,23 @@ const TemplateBuilder: React.FC = () => {
                             </div>
                           )}
                         </div>
-                        <div className="space-y-4">
-                          <RichTextEditor
+                        <div className="px-6 py-5 space-y-4">
+                          <textarea
+                            ref={(el) => {
+                              textAreaRefs.current[block.id] = el;
+                            }}
                             value={block.content}
-                            onChange={(html) => updateClauseContent(block.id, html)}
+                            onChange={(e) => updateClauseContent(block.id, e.target.value)}
                             onFocus={() => setActiveClauseId(block.id)}
                             placeholder="Write legal language here..."
                             disabled={!canEdit}
-                            minHeight="160px"
+                            className="w-full min-h-[160px] bg-transparent border-none focus:ring-0 text-base leading-[1.7] whitespace-pre-wrap text-slate-700 dark:text-slate-300 placeholder:text-slate-400"
+                            style={{
+                              fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+                            }}
                           />
                           {canEdit && !previewMode && (
-                            <label className="inline-flex items-center gap-2 text-xs text-slate-500 px-6 pb-4">
+                            <label className="inline-flex items-center gap-2 text-xs text-slate-500">
                               <input
                                 type="checkbox"
                                 checked={block.required}
