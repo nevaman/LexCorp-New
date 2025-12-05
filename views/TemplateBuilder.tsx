@@ -764,9 +764,9 @@ const TemplateBuilder: React.FC = () => {
                     draft.map((block, index) => (
                       <div
                         key={block.id}
-                        className="border border-slate-200 dark:border-white/10 rounded-2xl bg-white dark:bg-[#050c1f] shadow-sm mt-6 first:mt-0"
+                        className="border border-slate-200 dark:border-slate-600 rounded-2xl bg-white dark:bg-slate-800 shadow-sm mt-6 first:mt-0"
                       >
-                        <div className="px-6 py-5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+                        <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-600 flex items-center justify-between">
                           <input
                             type="text"
                             value={block.title}
@@ -824,7 +824,7 @@ const TemplateBuilder: React.FC = () => {
                             onFocus={() => setActiveClauseId(block.id)}
                             placeholder="Write legal language here..."
                             disabled={!canEdit}
-                            className="w-full min-h-[160px] bg-transparent border-none focus:ring-0 text-base leading-[1.7] whitespace-pre-wrap text-slate-700 dark:text-slate-300 placeholder:text-slate-400"
+                            className="w-full min-h-[160px] bg-transparent border-none focus:ring-0 text-base leading-[1.7] whitespace-pre-wrap text-slate-700 dark:text-slate-100 placeholder:text-slate-400"
                             style={{
                               fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
                             }}
