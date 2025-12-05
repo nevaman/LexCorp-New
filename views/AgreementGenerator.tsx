@@ -474,7 +474,7 @@ const AgreementGenerator: React.FC<GeneratorProps> = ({
     <>
       {showQuickProject && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white dark:bg-[#0f172a] rounded-3xl shadow-2xl w-full max-w-lg p-8 relative">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-lg p-8 relative">
             <button
               className="absolute top-4 right-4 text-slate-500 hover:text-slate-800 dark:hover:text-white"
               onClick={handleQuickProjectClose}
@@ -510,7 +510,7 @@ const AgreementGenerator: React.FC<GeneratorProps> = ({
                   onChange={(e) =>
                     setQuickProjectForm((prev) => ({ ...prev, name: e.target.value }))
                   }
-                  className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#020617] text-sm mt-1"
+                  className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm mt-1"
                   placeholder="Growth Initiative"
                 />
               </div>
@@ -527,13 +527,13 @@ const AgreementGenerator: React.FC<GeneratorProps> = ({
                     }))
                   }
                   rows={3}
-                  className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#020617] text-sm mt-1"
+                  className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm mt-1"
                   placeholder="Optional summary..."
                 />
               </div>
               {isOrgAdmin && (
                 <div className="flex gap-3">
-                  <label className="flex-1 p-3 border border-slate-200 dark:border-slate-800 rounded-xl text-sm flex items-center gap-2 cursor-pointer">
+                  <label className="flex-1 p-3 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl text-sm flex items-center gap-2 cursor-pointer">
                     <input
                       type="radio"
                       name="quick-project-scope"
@@ -545,7 +545,7 @@ const AgreementGenerator: React.FC<GeneratorProps> = ({
                     />
                     Org-wide
                   </label>
-                  <label className="flex-1 p-3 border border-slate-200 dark:border-slate-800 rounded-xl text-sm flex items-center gap-2 cursor-pointer">
+                  <label className="flex-1 p-3 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl text-sm flex items-center gap-2 cursor-pointer">
                     <input
                       type="radio"
                       name="quick-project-scope"
@@ -576,7 +576,7 @@ const AgreementGenerator: React.FC<GeneratorProps> = ({
                         branchOfficeId: e.target.value,
                       }))
                     }
-                    className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#020617] text-sm mt-1"
+                    className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm mt-1"
                   >
                     <option value="">Select branch</option>
                     {branches.map((branch) => (
@@ -609,7 +609,7 @@ const AgreementGenerator: React.FC<GeneratorProps> = ({
       )}
       {showQuickVendor && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white dark:bg-[#0f172a] rounded-3xl shadow-2xl w-full max-w-lg p-8 relative">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-lg p-8 relative">
             <button
               className="absolute top-4 right-4 text-slate-500 hover:text-slate-800 dark:hover:text-white"
               onClick={handleQuickVendorClose}
@@ -645,7 +645,7 @@ const AgreementGenerator: React.FC<GeneratorProps> = ({
                   onChange={(e) =>
                     setQuickVendorForm((prev) => ({ ...prev, name: e.target.value }))
                   }
-                  className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#020617] text-sm mt-1"
+                  className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm mt-1"
                   placeholder="e.g. Polar Manufacturing"
                 />
               </div>
@@ -659,13 +659,13 @@ const AgreementGenerator: React.FC<GeneratorProps> = ({
                   onChange={(e) =>
                     setQuickVendorForm((prev) => ({ ...prev, tin: e.target.value }))
                   }
-                  className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#020617] text-sm mt-1"
+                  className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm mt-1"
                   placeholder="Tax identification number"
                 />
               </div>
               {isOrgAdmin && (
                 <div className="flex gap-3">
-                  <label className="flex-1 p-3 border border-slate-200 dark:border-slate-800 rounded-xl text-sm flex items-center gap-2 cursor-pointer">
+                  <label className="flex-1 p-3 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl text-sm flex items-center gap-2 cursor-pointer">
                     <input
                       type="radio"
                       name="quick-scope"
@@ -677,7 +677,7 @@ const AgreementGenerator: React.FC<GeneratorProps> = ({
                     />
                     Org-wide
                   </label>
-                  <label className="flex-1 p-3 border border-slate-200 dark:border-slate-800 rounded-xl text-sm flex items-center gap-2 cursor-pointer">
+                  <label className="flex-1 p-3 border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 rounded-xl text-sm flex items-center gap-2 cursor-pointer">
                     <input
                       type="radio"
                       name="quick-scope"
@@ -708,7 +708,7 @@ const AgreementGenerator: React.FC<GeneratorProps> = ({
                         branchOfficeId: e.target.value,
                       }))
                     }
-                    className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#020617] text-sm mt-1"
+                    className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm mt-1"
                   >
                     <option value="">Select branch</option>
                     {(isOrgAdmin ? branches : branches.filter((b) => b.id === branchOfficeId)).map(
@@ -734,7 +734,7 @@ const AgreementGenerator: React.FC<GeneratorProps> = ({
                       contactEmail: e.target.value,
                     }))
                   }
-                  className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#020617] text-sm mt-1"
+                  className="w-full p-3 rounded-xl border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm mt-1"
                   placeholder="legal@vendor.com"
                 />
               </div>
@@ -758,10 +758,10 @@ const AgreementGenerator: React.FC<GeneratorProps> = ({
           </div>
         </div>
       )}
-      <div className="flex h-full bg-slate-100 dark:bg-[#020617] text-slate-900 dark:text-slate-300">
+      <div className="flex h-full bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-slate-300">
       {/* Left Sidebar: Metadata */}
-      <div className="w-80 bg-white dark:bg-[#0f172a] border-r border-slate-200 dark:border-white/5 flex flex-col h-full overflow-y-auto shadow-xl z-10">
-        <div className="p-6 border-b border-slate-200 dark:border-white/5">
+      <div className="w-80 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-600 flex flex-col h-full overflow-y-auto shadow-xl z-10">
+        <div className="p-6 border-b border-slate-200 dark:border-slate-600">
           <button onClick={onBack} className="flex items-center text-slate-500 dark:text-slate-400 hover:text-brand mb-6 transition-colors text-sm font-medium group">
             <ArrowLeft size={16} className="mr-2 group-hover:-translate-x-1 transition-transform" /> Back to Dashboard
           </button>
@@ -776,7 +776,7 @@ const AgreementGenerator: React.FC<GeneratorProps> = ({
                     type="text" 
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    className="w-full p-3 bg-slate-50 dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-brand/50 focus:border-brand outline-none transition-all"
+                    className="w-full p-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-brand/50 focus:border-brand outline-none transition-all"
                     placeholder="Agreement Title"
                 />
             </div>
@@ -786,7 +786,7 @@ const AgreementGenerator: React.FC<GeneratorProps> = ({
                   <select
                     value={selectedVendorId ?? (counterparty ? '__custom' : '')}
                     onChange={(e) => handleVendorSelect(e.target.value)}
-                    className="w-full p-3 bg-slate-50 dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-brand/50 outline-none"
+                    className="w-full p-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-brand/50 outline-none"
                   >
                     <option value="">
                       {vendorsLoading ? 'Loading vendors…' : 'Select registered vendor'}
@@ -829,7 +829,7 @@ const AgreementGenerator: React.FC<GeneratorProps> = ({
                   <select
                     value={selectedProjectId || ''}
                     onChange={(e) => handleProjectSelect(e.target.value)}
-                    className="w-full p-3 bg-slate-50 dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-brand/50 outline-none"
+                    className="w-full p-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-brand/50 outline-none"
                   >
                     <option value="">
                       {projectsLoading ? 'Loading projects…' : 'Unassigned'}
@@ -872,7 +872,7 @@ const AgreementGenerator: React.FC<GeneratorProps> = ({
                             );
                           }
                         }}
-                        className="w-full p-3 bg-slate-50 dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-brand/50 outline-none appearance-none"
+                        className="w-full p-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-brand/50 outline-none appearance-none"
                     >
                         <option value="">Select template</option>
                         {templates.map((tmpl) => (
@@ -886,11 +886,11 @@ const AgreementGenerator: React.FC<GeneratorProps> = ({
             </div>
             <div className="space-y-1">
                 <label className="block text-[10px] font-bold text-brand/80 uppercase tracking-wider">Effective Date</label>
-                <input type="date" className="w-full p-3 bg-slate-50 dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-500 dark:text-slate-300 focus:ring-2 focus:ring-brand/50 outline-none dark:[color-scheme:dark]" />
+                <input type="date" className="w-full p-3 bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg text-sm text-slate-500 dark:text-slate-200 focus:ring-2 focus:ring-brand/50 outline-none dark:[color-scheme:dark]" />
             </div>
 
              {/* Auto Summary Box */}
-            <div className="bg-slate-100 dark:bg-[#1e293b]/50 p-4 rounded-xl border border-slate-200 dark:border-white/5 mt-6 backdrop-blur-sm">
+            <div className="bg-slate-100 dark:bg-slate-700 p-4 rounded-xl border border-slate-200 dark:border-slate-600 mt-6 backdrop-blur-sm">
                 <h3 className="text-[10px] font-bold text-slate-400 uppercase mb-3 tracking-widest">Live AI Risk Analysis</h3>
                 <div className="flex items-center gap-3 mb-2">
                     <div className={`w-3 h-3 rounded-full shadow-[0_0_10px] ${riskData.level === 'High' ? 'bg-red-500 shadow-red-500/50' : riskData.level === 'Medium' ? 'bg-amber-500 shadow-amber-500/50' : 'bg-emerald-500 shadow-emerald-500/50'}`}></div>
@@ -900,7 +900,7 @@ const AgreementGenerator: React.FC<GeneratorProps> = ({
             </div>
         </div>
 
-        <div className="p-6 border-t border-slate-200 dark:border-white/5 bg-white dark:bg-[#020617] space-y-3">
+        <div className="p-6 border-t border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 space-y-3">
             {saveError && (
               <p className="text-xs text-red-500 font-semibold text-center">{saveError}</p>
             )}
@@ -923,7 +923,7 @@ const AgreementGenerator: React.FC<GeneratorProps> = ({
       </div>
 
             {/* Center: Editor (Paginated A4 Representation) */}
-            <div className="flex-1 overflow-y-auto p-8 relative bg-slate-200 dark:bg-[#020617] flex flex-col items-center">
+            <div className="flex-1 overflow-y-auto p-8 relative bg-slate-200 dark:bg-slate-700 flex flex-col items-center">
               <div className="absolute inset-0 opacity-5 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
               <div className="space-y-12">
                 {paginatedSections.map((pageClauses, pageIndex) => {
@@ -1077,8 +1077,8 @@ const AgreementGenerator: React.FC<GeneratorProps> = ({
             </div>
 
       {/* Right Sidebar: Tools */}
-      <div className="w-72 bg-white dark:bg-[#0f172a] border-l border-slate-200 dark:border-white/5 flex flex-col shadow-xl z-10">
-          <div className="flex border-b border-slate-200 dark:border-white/5">
+      <div className="w-72 bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-600 flex flex-col shadow-xl z-10">
+          <div className="flex border-b border-slate-200 dark:border-slate-600">
               <button onClick={() => setActiveTab('details')} className={`flex-1 py-4 text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === 'details' ? 'text-brand border-b-2 border-brand bg-brand/5' : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'}`}>Clauses</button>
               <button onClick={() => setActiveTab('comments')} className={`flex-1 py-4 text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === 'comments' ? 'text-brand border-b-2 border-brand bg-brand/5' : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'}`}>Chat</button>
               <button onClick={() => setActiveTab('audit')} className={`flex-1 py-4 text-xs font-bold uppercase tracking-wider transition-colors ${activeTab === 'audit' ? 'text-brand border-b-2 border-brand bg-brand/5' : 'text-slate-500 hover:text-slate-900 dark:hover:text-slate-300'}`}>History</button>
@@ -1087,12 +1087,12 @@ const AgreementGenerator: React.FC<GeneratorProps> = ({
           <div className="flex-1 overflow-y-auto p-5">
               {activeTab === 'details' && (
                   <div className="space-y-6">
-                      <div className="p-4 bg-slate-50 dark:bg-[#1e293b] rounded-xl border border-slate-200 dark:border-white/5">
+                      <div className="p-4 bg-slate-50 dark:bg-slate-700 rounded-xl border border-slate-200 dark:border-slate-600">
                           <h4 className="text-xs font-bold text-slate-900 dark:text-white mb-3 flex items-center gap-2"><Info size={14} className="text-brand"/> Library</h4>
                           <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-4 leading-relaxed">Drag standard clauses to reset modified sections or enrich the contract.</p>
                           <div className="space-y-2.5">
                               {['Indemnification', 'Force Majeure', 'Governing Law', 'Non-Compete', 'Warranty'].map(c => (
-                                  <div key={c} className="bg-white dark:bg-[#020617] p-3 border border-slate-200 dark:border-slate-800 rounded-lg text-xs text-slate-600 dark:text-slate-300 shadow-sm cursor-grab hover:border-brand hover:text-brand transition-colors flex justify-between items-center group">
+                                  <div key={c} className="bg-white dark:bg-slate-600 p-3 border border-slate-200 dark:border-slate-500 rounded-lg text-xs text-slate-600 dark:text-slate-100 shadow-sm cursor-grab hover:border-brand hover:text-brand dark:hover:text-brand transition-colors flex justify-between items-center group">
                                       {c}
                                       <span className="opacity-0 group-hover:opacity-100 text-[10px] text-brand">+</span>
                                   </div>
@@ -1115,7 +1115,7 @@ const AgreementGenerator: React.FC<GeneratorProps> = ({
               {activeTab === 'audit' && (
                  <div className="space-y-6 relative before:absolute before:left-2 before:top-2 before:bottom-2 before:w-px before:bg-slate-200 dark:before:bg-slate-800 pl-2">
                      <div className="relative pl-6">
-                         <div className="absolute left-0 top-1 w-4 h-4 bg-white dark:bg-[#0f172a] border-2 border-brand rounded-full z-10"></div>
+                         <div className="absolute left-0 top-1 w-4 h-4 bg-white dark:bg-slate-800 border-2 border-brand rounded-full z-10"></div>
                          <div>
                              <p className="text-xs text-slate-900 dark:text-white font-medium">Draft Initialized</p>
                              <p className="text-[10px] text-slate-500 mt-0.5">By System User • Just now</p>
